@@ -10,4 +10,6 @@ while True:
     if user_text in ["/exit", "/quit"]:
         print("Goodbye!")
         break
-    print(f"You said: {user_text}")
+    messages.append({"role": "user", "content": user_text})
+    print(f"(padou remembers {len(messages)} messages)")
+print(messages)
