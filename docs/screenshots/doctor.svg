@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="338" viewBox="0 0 650 338">
+<rect width="650" height="338" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="648" height="336" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="325.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou doctor</text>
+<g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
+<text x="22.0" y="57" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">~/Projects/padou </text>
+<text x="165.3" y="57" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
+<text x="182.2" y="57" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">padou doctor</text>
+<text x="22.0" y="91" fill="#ff5fa2" font-weight="700" textLength="590.1" lengthAdjust="spacingAndGlyphs">                             padou doctor                             </text>
+<text x="22.0" y="108" fill="#7f849c" textLength="590.1" lengthAdjust="spacingAndGlyphs">┏━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</text>
+<rect x="25.2" y="112" width="2" height="17" fill="#7f849c"/>
+<rect x="58.9" y="112" width="2" height="17" fill="#7f849c"/>
+<text x="64.2" y="125" fill="#c8cde8" font-weight="700" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Check             </text>
+<rect x="227.5" y="112" width="2" height="17" fill="#7f849c"/>
+<text x="232.8" y="125" fill="#c8cde8" font-weight="700" textLength="370.9" lengthAdjust="spacingAndGlyphs"> Details                                    </text>
+<rect x="606.9" y="112" width="2" height="17" fill="#7f849c"/>
+<text x="22.0" y="142" fill="#7f849c" textLength="590.1" lengthAdjust="spacingAndGlyphs">┡━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩</text>
+<rect x="25.6" y="146" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="159" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="146" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="159" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Python            </text>
+<rect x="227.9" y="146" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="159" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> 3.14.7                                     </text>
+<rect x="607.3" y="146" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="163" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="176" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
+<rect x="59.3" y="163" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="176" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Config file       </text>
+<rect x="227.9" y="163" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="176" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> ~/.config/padou/config.toml                </text>
+<rect x="607.3" y="163" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="180" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="193" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="180" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="193" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Model server      </text>
+<rect x="227.9" y="180" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="193" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> http://127.0.0.1:8080: ok                  </text>
+<rect x="607.3" y="180" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="197" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="210" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="197" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="210" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Models offered    </text>
+<rect x="227.9" y="197" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="210" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M      </text>
+<rect x="607.3" y="197" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="214" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="227" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
+<rect x="59.3" y="214" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="227" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Context window    </text>
+<rect x="227.9" y="214" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="227" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> 8192 tokens (from server)                  </text>
+<rect x="607.3" y="214" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="231" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="244" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="231" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="244" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Test reply        </text>
+<rect x="227.9" y="231" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="244" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> &#x27;ready&#x27; in 0.2s, 23.2 tok/s                </text>
+<rect x="607.3" y="231" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="248" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="261" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
+<rect x="59.3" y="248" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="261" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Theme             </text>
+<rect x="227.9" y="248" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="261" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> Omarchy theme: pink-horizon (colors.toml)  </text>
+<rect x="607.3" y="248" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="265" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="278" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="265" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="278" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Sessions folder   </text>
+<rect x="227.9" y="265" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="278" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> ~/.local/share/padou/sessions              </text>
+<rect x="607.3" y="265" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="30.4" y="295" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
+<rect x="59.3" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="64.2" y="295" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Clipboard (/copy) </text>
+<rect x="227.9" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="232.8" y="295" fill="#7f849c" textLength="370.9" lengthAdjust="spacingAndGlyphs"> wl-copy                                    </text>
+<rect x="607.3" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="312" fill="#7f849c" textLength="590.1" lengthAdjust="spacingAndGlyphs">└───┴───────────────────┴────────────────────────────────────────────┘</text>
+</g></svg>

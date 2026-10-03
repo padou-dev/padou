@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="566" height="219" viewBox="0 0 566 219">
+<rect width="566" height="219" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="564" height="217" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="283.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou · slash-command menu</text>
+<g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
+<text x="22.0" y="57" fill="#ff5fa2" textLength="92.7" lengthAdjust="spacingAndGlyphs">  ┌───────┐</text>
+<text x="131.6" y="57" fill="#c8cde8" font-weight="700" textLength="101.2" lengthAdjust="spacingAndGlyphs">padou v0.1.0</text>
+<text x="232.7" y="57" fill="#7f849c" textLength="75.9" lengthAdjust="spacingAndGlyphs"> · παντού</text>
+<text x="22.0" y="74" fill="#ff5fa2" textLength="33.7" lengthAdjust="spacingAndGlyphs">  │ </text>
+<text x="55.7" y="74" fill="#c8cde8" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">&gt;_</text>
+<text x="89.4" y="74" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▌</text>
+<text x="97.9" y="74" fill="#ff5fa2" textLength="16.9" lengthAdjust="spacingAndGlyphs"> │</text>
+<text x="131.6" y="74" fill="#7f849c" textLength="252.9" lengthAdjust="spacingAndGlyphs">Qwen3.5 4B · local · read-only</text>
+<text x="22.0" y="91" fill="#ff5fa2" textLength="92.7" lengthAdjust="spacingAndGlyphs">  └──┬─┬──┘</text>
+<text x="131.6" y="91" fill="#7f849c" textLength="134.9" lengthAdjust="spacingAndGlyphs">~/Projects/padou</text>
+<text x="22.0" y="108" fill="#ff5fa2" textLength="84.3" lengthAdjust="spacingAndGlyphs">   ──┴─┴──</text>
+<text x="22.0" y="142" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
+<text x="38.9" y="142" fill="#c8cde8" textLength="25.3" lengthAdjust="spacingAndGlyphs">/re</text>
+<text x="64.2" y="142" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▏</text>
+<rect x="38.9" y="146" width="84.3" height="17" fill="#ff5fa2"/>
+<text x="38.9" y="159" fill="#16161e" font-weight="700" textLength="84.3" lengthAdjust="spacingAndGlyphs"> /resume  </text>
+<text x="123.2" y="159" fill="#ff5fa2" textLength="320.3" lengthAdjust="spacingAndGlyphs">  List saved sessions, or continue one</text>
+<text x="22.0" y="176" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">   /help    </text>
+<text x="123.2" y="176" fill="#7f849c" textLength="202.3" lengthAdjust="spacingAndGlyphs">  Show commands and keys</text>
+<text x="22.0" y="193" fill="#ff5fa2" textLength="92.7" lengthAdjust="spacingAndGlyphs"> Qwen3.5 4B</text>
+<text x="114.7" y="193" fill="#7f849c" textLength="278.2" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 0/8192 · /help </text>
+</g></svg>

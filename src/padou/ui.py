@@ -19,7 +19,7 @@ from rich.theme import Theme as RichTheme
 from padou import __version__
 from padou.theme import Theme
 
-console = Console(highlight=False)
+console = Console(highlight=False, record=True)  # record=True lets /screenshot save the screen
 
 
 def configure(theme: Theme) -> None:
@@ -194,6 +194,13 @@ def markdown(text: str) -> None:
 def clear() -> None:
     if console.is_terminal:
         console.clear()
+
+
+def save_screenshot(path: Path, title: str = "padou") -> Path:
+    """Everything padou has printed this session, as an SVG image."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    console.save_svg(str(path), title=title, clear=False)
+    return path
 
 
 def group(*items) -> Group:

@@ -1,13 +1,8 @@
-```
-  ┌───────┐  padou v0.1.0 · παντού
-  │ >_  ▌ │  Qwen3.5 4B · local · read-only
-  └──┬─┬──┘  ~/Projects/padou
-   ──┴─┴──
-```
-
 # padou
 
 A lightweight, local-first AI assistant for your terminal, built for small models running on a laptop.
+
+<p align="center"><img src="docs/screenshots/chat.svg" alt="padou answering questions with its read-only tools" width="760"></p>
 
 padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools. Nothing leaves your machine except the requests padou sends to the server you configure.
 
@@ -105,6 +100,8 @@ uv tool install --editable .
 
 ### 3. Check and chat
 
+<p align="center"><img src="docs/screenshots/doctor.svg" alt="padou doctor checking server, model and config" width="620"></p>
+
 ```bash
 padou doctor            # checks server, model, config, theme, clipboard
 padou                   # start chatting
@@ -127,6 +124,9 @@ padou --version
 
 ### Slash commands
 
+<p align="center"><img src="docs/screenshots/help.svg" alt="padou's /help command list" width="760"></p>
+<p align="center"><img src="docs/screenshots/autocomplete.svg" alt="slash-command autocomplete" width="520"></p>
+
 | Command | What it does |
 |---|---|
 | `/help` | Show commands and keys |
@@ -139,6 +139,7 @@ padou --version
 | `/compact` | Summarise the conversation to free up context |
 | `/doctor` | Run the checks from inside padou |
 | `/system` | Show the system prompt |
+| `/screenshot [name]` | Save the screen as an SVG image (in `~/Pictures/padou/`) |
 | `/exit`, `/quit` | Quit (also `Ctrl+D`, or `Ctrl+C` twice) |
 
 ### Keys

@@ -134,6 +134,17 @@ def cmd_compact(app: "App", arg: str):
     app.compact()
 
 
+def cmd_screenshot(app: "App", arg: str):
+    from datetime import datetime
+    from pathlib import Path
+
+    pictures = Path.home() / "Pictures"
+    folder = (pictures if pictures.is_dir() else Path.cwd()) / "padou"
+    name = arg.strip() or f"padou-{datetime.now():%Y%m%d-%H%M%S}"
+    path = ui.save_screenshot(folder / (name if name.endswith(".svg") else name + ".svg"))
+    ui.success(app.theme, f"Saved {ui.short_path(path)} (everything shown since padou started)")
+
+
 def cmd_system(app: "App", arg: str):
     ui.markdown("```text\n" + app.session.messages[0]["content"] + "\n```")
 
@@ -149,6 +160,7 @@ COMMANDS: dict[str, Command] = {
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),
     "system": Command(cmd_system, "Show the system prompt"),
+    "screenshot": Command(cmd_screenshot, "Save the screen as an SVG image", "[name]"),
     "exit": Command(cmd_exit, "Quit padou (also Ctrl+D)"),
     # aliases
     "quit": Command(cmd_exit, "Quit padou"),
