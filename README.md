@@ -1,0 +1,200 @@
+```
+  ┌───────┐  padou v0.1.0 · παντού
+  │ >_  ▌ │  Qwen3.5 4B · local · read-only
+  └──┬─┬──┘  ~/Projects/padou
+   ──┴─┴──
+```
+
+# padou
+
+A lightweight, local-first AI assistant for your terminal, built for small models running on a laptop.
+
+padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools. Nothing leaves your machine except the requests padou sends to the server you configure.
+
+> [!NOTE]
+> **padou** (παντού, pronounced "padoú") is Greek for "everywhere". This is a learning project, version 0.x. Expect rough edges.
+
+## Features
+
+- **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
+- **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands (`df`, `journalctl -u`, `systemctl status`, `pacman -Q`…).
+- **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (`~/.ssh`, `~/.gnupg`, keyrings, `.env`, private keys, browser profiles) blocked even through symlinks.
+- **Sessions:** every conversation is saved; continue with `/resume` or `padou -c`.
+- **Omarchy aware:** picks up the accent colour of your current Omarchy theme, with a built-in palette everywhere else.
+- **Small-model friendly:** short system prompt, few tools, capped tool output, `/compact` when the context fills up.
+
+## What to expect from a 4B model
+
+Small models are fast and private, but they're not Claude or GPT. They're good at explaining commands, reading a config or log and summarising it, and answering everyday questions. They're weaker at long multi-step reasoning and sometimes pick the wrong tool or misread output. padou keeps the toolset small and the output capped to help them.
+
+## Requirements
+
+- Linux (developed on Arch / Omarchy 4)
+- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
+- An OpenAI-compatible model server. For llama.cpp, start it **with `--jinja`**, which tool calling needs.
+
+## Quick start
+
+### 1. Run a model server
+
+With llama.cpp (Vulkan build on AMD/Intel GPUs):
+
+```bash
+llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M \
+  -ngl 99 --jinja --reasoning-budget 0 -c 8192 --port 8080 --no-mmproj
+```
+
+| Flag | Why |
+|---|---|
+| `-ngl 99` | Put every layer on the GPU |
+| `--jinja` | Use the model's chat template; required for tool calling |
+| `--reasoning-budget 0` | Turn off "thinking", which small models tend to overdo |
+| `-c 8192` | Context window in tokens |
+| `--no-mmproj` | Skip the vision add-on; padou is text-only |
+
+Or with Ollama: `ollama pull qwen3.5:4b`, then set `url = "http://127.0.0.1:11434"` and the model name in the config.
+
+### 2. Install padou
+
+```bash
+git clone git@github.com:padou-dev/padou.git
+cd padou
+./install.sh            # or: uv tool install .
+```
+
+### 3. Check and chat
+
+```bash
+padou doctor            # checks server, model, config, theme, clipboard
+padou                   # start chatting
+```
+
+## Usage
+
+```
+padou                 start a chat in the current directory
+padou -c              continue the most recent session
+padou doctor          check that everything works
+padou --compact       one-line banner
+padou --no-tools      chat without any tools
+padou --url URL       use a different server for this run
+padou --init-config   write an example config
+padou --version
+```
+
+### Slash commands
+
+| Command | What it does |
+|---|---|
+| `/help` | Show commands and keys |
+| `/clear` | Start a fresh conversation (the old one is saved) |
+| `/models [n\|name]` | List models on the server, or switch |
+| `/status` | Model, server, context use and speed |
+| `/copy` | Copy the last reply to the clipboard (`wl-copy`) |
+| `/tools` | List the tools padou may use |
+| `/resume [n]` | List saved sessions, or continue one |
+| `/compact` | Summarise the conversation to free up context |
+| `/doctor` | Run the checks from inside padou |
+| `/system` | Show the system prompt |
+| `/exit`, `/quit` | Quit (also `Ctrl+D`, or `Ctrl+C` twice) |
+
+### Keys
+
+`Enter` send · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Ctrl+C` cancel a reply · `Ctrl+D` quit
+
+## Tools
+
+padou's model can only **ask** to use a tool; padou's own code decides whether the request is allowed. Every call is shown on screen:
+
+```
+● Run journalctl --no-pager -n 100 -u NetworkManager
+  ⎿ 101 lines
+```
+
+| Tool | What it does |
+|---|---|
+| `read_file` | Read a text file, with line numbers |
+| `list_dir` | List a folder |
+| `search` | Case-insensitive text or regex search in a file or folder (skips `.git`, `.venv`, `node_modules`) |
+| `run_command` | One entry from the approved list below |
+
+Approved commands: `disk_usage`, `memory`, `uptime`, `kernel`, `ip_addresses`, `routes`, `block_devices`, `processes`, `failed_services`, `service_status <service>`, `user_service_status <service>`, `service_logs <service>`, `recent_errors`, `package_info <package>`, `package_details <package>`, `which <program>`, `gpu_vulkan`, `sensors`, `git_status`, `git_log`.
+
+> [!IMPORTANT]
+> **The safety rules:** commands are run as argument lists with `shell=False`, so `;`, `&&` and `$(...)` mean nothing. Arguments must match `^[A-Za-z0-9@._:+-]{1,64}$` and can't start with `-`. No `sudo`, ever. Tool output is capped (8000 characters by default) so logs can't flood the context.
+
+## Configuration
+
+`padou --init-config` writes `~/.config/padou/config.toml`. Every setting is optional:
+
+```toml
+[server]
+url = "http://127.0.0.1:8080"
+model = "qwen3.5-4b"
+model_label = "Qwen3.5 4B"
+timeout = 180
+
+[chat]
+temperature = 0.7
+stream = true
+max_tool_rounds = 8
+
+[tools]
+enabled = true
+commands = true
+max_output_chars = 8000
+
+[ui]
+banner = "full"        # or "compact"
+accent = ""            # e.g. "#ff5fa2"; empty = Omarchy theme accent
+```
+
+See [`config.example.toml`](config.example.toml) for every option.
+
+### Where padou keeps things
+
+| What | Where |
+|---|---|
+| Config | `~/.config/padou/config.toml` |
+| Saved sessions | `~/.local/share/padou/sessions/` |
+| Input history | `~/.local/share/padou/history` |
+
+## Extras
+
+- **Start the model server on login:** see [`contrib/llama-server.service`](contrib/llama-server.service).
+- **Open padou from anywhere with a hotkey (Hyprland):** see [`contrib/hyprland.conf`](contrib/hyprland.conf).
+
+## Troubleshooting
+
+| Problem | Likely cause and fix |
+|---|---|
+| `Can't reach the model server` | `llama-server` isn't running, or is on another port. Start it, or set `[server] url`. Run `padou doctor` |
+| `Server error 500 … tool` | llama-server was started without `--jinja`. Restart it with the flag |
+| Replies take forever and "think" in circles | Reasoning is on. Add `--reasoning-budget 0` to llama-server |
+| Very slow replies (2–5 tok/s) | The model is running on the CPU. Check `llama-cli --list-devices` shows Vulkan, and use `-ngl 99` |
+| `The server took longer than 180s` | Long answer on a slow machine. Raise `[server] timeout` |
+| `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |
+| The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
+| `padou: command not found` after install | `~/.local/bin` isn't on your PATH. Add it, or run `uv tool update-shell` |
+| Colours look wrong | Set `[ui] accent = "#rrggbb"`, or `NO_COLOR=1 padou` for no colour |
+| `/copy` fails | Install `wl-clipboard` (`sudo pacman -S wl-clipboard`) |
+
+## Uninstall
+
+```bash
+uv tool uninstall padou
+systemctl --user disable --now llama-server 2>/dev/null; rm -f ~/.config/systemd/user/llama-server.service
+rm -rf ~/.config/padou ~/.local/share/padou     # config, sessions and history
+```
+
+## Development
+
+```bash
+uv sync
+uv run padou           # run from the source tree
+uv run pytest          # tests for the tool safety rules, config and theme
+```
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).

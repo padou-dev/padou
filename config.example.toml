@@ -1,0 +1,28 @@
+# padou configuration
+# Location: ~/.config/padou/config.toml
+
+[server]
+# Any OpenAI-compatible server: llama.cpp (llama-server), Ollama, LM Studio...
+url = "http://127.0.0.1:8080"          # Ollama: "http://127.0.0.1:11434"
+model = "qwen3.5-4b"                    # name sent to the server; /models lists real ones
+model_label = "Qwen3.5 4B"              # shown in the banner and status line
+api_key = ""                            # only if your server needs one
+timeout = 180                           # seconds to wait for a reply
+context_size = 8192                     # fallback when the server doesn't report it
+
+[chat]
+temperature = 0.7
+stream = true                           # show replies as they are written
+max_tool_rounds = 8                     # tool calls allowed per question
+# system_prompt = """You are padou..."""
+
+[tools]
+enabled = true                          # read-only file tools
+commands = true                         # approved read-only system commands
+max_output_chars = 8000                 # tool output is cut to this size
+command_timeout = 15
+
+[ui]
+banner = "full"                         # "full" or "compact"
+accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
+show_tool_output = false                # print full tool output, not just a summary

@@ -1,0 +1,22 @@
+# Run llama-server as a systemd *user* service, so the model is ready after login.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp contrib/llama-server.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now llama-server
+#
+# Check:  systemctl --user status llama-server
+# Logs:   journalctl --user -u llama-server -f
+
+[Unit]
+Description=llama.cpp model server for padou
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

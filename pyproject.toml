@@ -1,7 +1,40 @@
 [project]
 name = "padou"
 version = "0.1.0"
-requires-python = ">=3.14"
+description = "A lightweight, local-first AI assistant for your terminal."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "p@nos", email = "padou.dev@proton.me" }]
+requires-python = ">=3.11"
 dependencies = [
-    "httpx>=0.28.1",
+    "httpx>=0.27",
+    "prompt-toolkit>=3.0.43",
+    "rich>=13.7",
 ]
+keywords = ["ai", "assistant", "cli", "llama.cpp", "local-llm", "terminal"]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Repository = "https://github.com/padou-dev/padou"
+
+[project.scripts]
+padou = "padou.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/padou"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
