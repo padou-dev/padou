@@ -18,12 +18,21 @@ def ask_model(conversation):
 show_banner()
 messages = [make_message("system", "You are padou, a helpful terminal assistant.")]
 while True:
-    user_text = input("> ")
+    try:
+        user_text = input("> ")
+    except (KeyboardInterrupt, EOFError):
+        print("\nGoodbye!")
+        break
     if user_text in ["/exit", "/quit"]:
         print("Goodbye!")
         break
     messages.append(make_message("user", user_text))
-    reply = ask_model(messages)
+    try:
+        reply = ask_model(messages)
+    except httpx.ConnectError:
+        print("Can't reach the model server. Is lamma-server running?")
+        message.pop()
+        continue
     print(reply)
     messages.append(make_message("assistant", reply))
 print(messages)
