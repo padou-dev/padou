@@ -30,7 +30,7 @@ Small models are fast and private, but they're not Claude or GPT. They're good a
 | Platform | Status |
 |---|---|
 | **Linux** | ✅ Developed and tested on Arch / Omarchy 4 |
-| **Windows (WSL)** | ✅ It's Linux, so it should work like Linux |
+| **Windows (WSL)** | ✅ It's Linux, so it should work like Linux. **[Step-by-step guide](docs/install_windows_wsl.md)** |
 | **macOS** | 🟡 Untested. Chat should work; several approved commands are Linux-only |
 | **Windows (native)** | 🟡 Untested. Chat may work; the system commands, `/copy` and GPU detection are Linux-only |
 
@@ -101,6 +101,8 @@ git clone git@github.com:padou-dev/padou.git
 cd padou
 ./install.sh            # or: uv tool install .
 ```
+
+On Windows? Follow the **[WSL guide](docs/install_windows_wsl.md)**.
 
 This puts a `padou` command in `~/.local/bin`, so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
 

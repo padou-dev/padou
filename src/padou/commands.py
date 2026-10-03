@@ -88,12 +88,17 @@ def cmd_copy(app: "App", arg: str):
     if not app.last_reply:
         ui.info(app.theme, "Nothing to copy yet.")
         return
-    for tool, argv in (("wl-copy", ["wl-copy"]), ("xclip", ["xclip", "-selection", "clipboard"]), ("pbcopy", ["pbcopy"])):
+    for tool, argv in (
+        ("wl-copy", ["wl-copy"]),
+        ("xclip", ["xclip", "-selection", "clipboard"]),
+        ("pbcopy", ["pbcopy"]),
+        ("clip.exe", ["clip.exe"]),  # Windows clipboard, reachable from WSL
+    ):
         if shutil.which(tool):
             subprocess.run(argv, input=app.last_reply, text=True, check=False)
             ui.success(app.theme, f"Copied the last reply ({len(app.last_reply)} characters).")
             return
-    ui.error(app.theme, "No clipboard tool found. On Arch: sudo pacman -S wl-clipboard")
+    ui.error(app.theme, "No clipboard tool found. Linux (Wayland): install wl-clipboard; X11: xclip")
 
 
 def cmd_tools(app: "App", arg: str):

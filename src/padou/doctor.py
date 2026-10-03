@@ -54,7 +54,7 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
         checks.append(("Sessions folder", writable, ui.short_path(paths.SESSIONS_DIR)))
     except OSError as exc:
         checks.append(("Sessions folder", False, str(exc)))
-    clip = next((c for c in ("wl-copy", "xclip", "pbcopy") if shutil.which(c)), None)
+    clip = next((c for c in ("wl-copy", "xclip", "pbcopy", "clip.exe") if shutil.which(c)), None)
     checks.append(("Clipboard (/copy)", bool(clip), clip or "install wl-clipboard"))
 
     rows = []
