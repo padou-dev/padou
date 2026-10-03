@@ -22,7 +22,7 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
     if cfg.source:
         checks.append(("Config file", not cfg.warnings, f"{ui.short_path(cfg.source)}" + (f" ({len(cfg.warnings)} problems)" if cfg.warnings else "")))
     else:
-        checks.append(("Config file", None, "none, using defaults (create one: padou --init-config)"))
+        checks.append(("Config file", None, "none, using defaults (create one: padou setup)"))
     for w in cfg.warnings:
         checks.append(("  config", False, w))
 

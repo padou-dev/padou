@@ -5,18 +5,21 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from padou import __version__, config, doctor, server, sessions, theme, ui
+from padou import __version__, config, detect, doctor, paths, server, sessions, theme, ui
+from padou import setup as setup_wizard
 from padou.app import App
 from padou.client import Client
+from rich.text import Text
 
 
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="padou", description="A lightweight, local-first AI assistant for your terminal.")
-    p.add_argument("command", nargs="?", choices=["chat", "doctor"], default="chat", help="chat (default) or doctor")
+    p.add_argument("command", nargs="?", choices=["chat", "doctor", "setup"], default="chat", help="chat (default), doctor or setup")
     p.add_argument("-V", "--version", action="version", version=f"padou {__version__} · παντού")
     p.add_argument("-c", "--continue", dest="resume_last", action="store_true", help="continue the most recent session")
     p.add_argument("--compact", action="store_true", help="one-line banner")
     p.add_argument("--no-tools", action="store_true", help="disable all tools for this run")
+    p.add_argument("-y", "--yes", action="store_true", help="setup: accept the recommended choices")
     p.add_argument("--no-autostart", action="store_true", help="don't start llama-server automatically")
     p.add_argument("--url", help="model server URL (overrides the config)")
     p.add_argument("--model", help="model name to request (overrides the config)")
@@ -36,6 +39,27 @@ def main(argv=None) -> int:
         except FileExistsError as exc:
             print(f"{exc} already exists; not overwriting.")
             return 1
+
+    if args.command == "setup":
+        th = theme.load()
+        ui.configure(th)
+        setup_wizard.run(th, auto=args.yes)
+        return 0
+
+    first_run = args.command == "chat" and args.config is None and not paths.CONFIG_FILE.exists()
+    if first_run and detect.is_tty() and not args.url:
+        th = theme.load()
+        ui.configure(th)
+        ui.clear()
+        ui.info(th, "First run: let's set padou up. (Skip this any time with Ctrl+C; re-run with `padou setup`.)\n")
+        try:
+            setup_wizard.run(th)
+        except (KeyboardInterrupt, EOFError):
+            ui.info(th, "\nSetup skipped; using the defaults.")
+        try:
+            ui.console.input(Text("\nPress Enter to start padou…", style=th.dim))
+        except (KeyboardInterrupt, EOFError):
+            return 0
 
     cfg = config.load(args.config)
     if args.url:

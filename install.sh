@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# padou installer: installs the padou command and a starter config.
-# It does NOT install llama.cpp or download a model; it tells you how.
+# padou installer: installs the padou command, then runs `padou setup`.
+# It never installs llama.cpp or uses sudo; the wizard shows you the command.
 # Read it before running it: it's short on purpose.
 set -euo pipefail
 
@@ -24,36 +24,11 @@ fi
 say "Installing padou with uv tool install..."
 uv tool install --force --reinstall .
 
-# 3. a starter config (never overwrites an existing one)
+# 3. the setup wizard: picks a server and model, writes the config
 if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/padou/config.toml" ]; then
-    say "Keeping your existing config."
+    say "Keeping your existing config (re-run the wizard any time: padou setup)."
 else
-    padou --init-config
-fi
-
-# 4. model server
-if command -v llama-server >/dev/null 2>&1; then
-    say "llama-server found: $(command -v llama-server)"
-else
-    warn "llama-server not found."
-    if command -v yay >/dev/null 2>&1; then
-        say "On Arch: yay -S llama.cpp-vulkan-git   (AMD/Intel GPU)"
-    fi
-    say "Or use Ollama / LM Studio and set [server] url in the config."
-fi
-
-# 5. optional: start llama-server on login
-if command -v llama-server >/dev/null 2>&1 && command -v systemctl >/dev/null 2>&1; then
-    read -r -p "Start llama-server automatically on login (systemd user service)? [y/N] " ans
-    if [[ "${ans,,}" == y* ]]; then
-        mkdir -p "$HOME/.config/systemd/user"
-        sed "s|/usr/bin/llama-server|$(command -v llama-server)|" contrib/llama-server.service \
-            > "$HOME/.config/systemd/user/llama-server.service"
-        systemctl --user daemon-reload
-        systemctl --user enable --now llama-server
-        say "Enabled. Logs: journalctl --user -u llama-server -f"
-        say "The first start downloads the model (~2.5 GB), so give it a few minutes."
-    fi
+    "$(uv tool dir --bin)/padou" setup || true   # full path: ~/.local/bin may not be on PATH yet
 fi
 
 say "Done. Run 'padou doctor' to check everything, then 'padou' to chat."

@@ -35,6 +35,39 @@ Small models are fast and private, but they're not Claude or GPT. They're good a
 
 ## Quick start
 
+```bash
+uv tool install git+https://github.com/padou-dev/padou
+padou
+```
+
+The first time you run `padou`, the **setup wizard** starts. It looks at your OS, GPU and RAM, finds any model server you already have (llama.cpp, Ollama or LM Studio), recommends a model, writes the config, and offers to start the server. If you have no model server yet, it shows the exact install command for your system. Re-run it any time with `padou setup`.
+
+The rest of this section explains what the wizard does for you, in case you'd rather do it by hand.
+
+### Choose a backend
+
+| Backend | Good for | Install |
+|---|---|---|
+| **llama.cpp** (recommended) | Smallest, fastest; padou can start it and download the model for you | Arch: `yay -S llama.cpp-vulkan-git` · macOS/Linux: `brew install llama.cpp` · CUDA/Vulkan: `conda install -c conda-forge llama.cpp` · or [prebuilt releases](https://github.com/ggml-org/llama.cpp/releases) |
+| **Ollama** | The easiest install; manages models for you | Linux: `curl -fsSL https://ollama.com/install.sh \| sh` · macOS: `brew install ollama` |
+| **LM Studio** | A desktop app with a model browser | [lmstudio.ai](https://lmstudio.ai), then turn on its local server |
+
+For llama.cpp, pick the build for your GPU: **Vulkan** for AMD or Intel, **CUDA** for NVIDIA, **Metal** on Apple Silicon (Homebrew's build has it), or the **CPU** build if you have no GPU.
+
+### Choose a model
+
+| # | Model | Made by | Download | Good for |
+|---|---|---|---|---|
+| 1 | Qwen3.5 2B | Alibaba | 1.4 GB | CPU-only machines and low RAM. Fastest, least capable |
+| 2 | **Qwen3.5 4B** (default) | Alibaba | 3.0 GB | Integrated GPUs and laptops |
+| 3 | Qwen3.5 9B | Alibaba | 6.2 GB | GPUs with 8 GB+ VRAM. Noticeably smarter |
+| 4 | Gemma 4 E4B | Google | 5.4 GB | A non-Chinese alternative in the 4B class |
+
+With llama.cpp the model downloads automatically the first time the server starts (the `-hf` flag). With Ollama: `ollama pull qwen3.5:4b` (or `qwen3.5:2b`, `qwen3.5:9b`, `gemma4:e4b`).
+
+> [!NOTE]
+> Gemma 4 **E4B** means 4B *effective* parameters: it runs at about 4B speed, but its extra embedding tables make the download bigger than Qwen3.5 4B's.
+
 ### 1. Run a model server
 
 padou **starts llama-server for you** when nothing is answering on localhost (see [Autostart](#autostart)), so if `llama-server` is installed you can skip to step 2. To run it yourself with llama.cpp (Vulkan build on AMD/Intel GPUs):
@@ -82,6 +115,7 @@ padou                   # start chatting
 ```
 padou                 start a chat in the current directory
 padou -c              continue the most recent session
+padou setup           (re)run the setup wizard; add -y to accept its recommendations
 padou doctor          check that everything works
 padou --compact       one-line banner
 padou --no-tools      chat without any tools
@@ -200,6 +234,8 @@ See [`config.example.toml`](config.example.toml) for every option.
 | `The server took longer than 180s` | Long answer on a slow machine. Raise `[server] timeout` |
 | `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |
 | The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
+| Setup recommends the wrong model | It's only a suggestion from your RAM and GPU. Pick another number, or edit `[server]` in the config |
+| Setup says llama.cpp is a CPU-only build | You have a GPU but installed the CPU build. Install the Vulkan (AMD/Intel), CUDA (NVIDIA) or Metal (Mac) build, then `padou setup` |
 | `padou: command not found` after install | `~/.local/bin` isn't on your PATH. Add it, or run `uv tool update-shell` |
 | `llama-server exited with code 1` on start | Read the log: `tail -50 ~/.local/state/padou/llama-server.log`. Often the port is taken or the model name is wrong |
 | The banner cursor doesn't blink | Your terminal ignores the text-blink attribute (Alacritty does, for example). Nothing to fix in padou; other terminals may show it |
@@ -213,6 +249,10 @@ uv tool uninstall padou
 systemctl --user disable --now llama-server 2>/dev/null; rm -f ~/.config/systemd/user/llama-server.service
 rm -rf ~/.config/padou ~/.local/share/padou     # config, sessions and history
 ```
+
+## Privacy
+
+padou has no telemetry and makes no network requests of its own beyond the model server you configure (by default on `127.0.0.1`). `padou setup` only checks `127.0.0.1` ports 8080, 11434 and 1234 to find local servers. The model download comes from Hugging Face (llama.cpp) or Ollama's registry, made by those tools, not by padou.
 
 ## Development
 

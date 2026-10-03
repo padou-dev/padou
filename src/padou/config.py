@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tomllib
 from dataclasses import dataclass, field, fields
 from pathlib import Path
@@ -117,21 +118,29 @@ def load(path: Path | None = None) -> Config:
     return cfg
 
 
-EXAMPLE_CONFIG = """\
+def _q(value: str) -> str:
+    """A TOML string. JSON string escaping is valid TOML for basic strings."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def render(server: ServerConfig | None = None, banner: str = "full") -> str:
+    """The full, commented config file, with the [server] values filled in."""
+    s = server or ServerConfig()
+    return f"""\
 # padou configuration
-# Location: ~/.config/padou/config.toml
+# Location: ~/.config/padou/config.toml   (re-create it any time with: padou setup)
 
 [server]
 # Any OpenAI-compatible server: llama.cpp (llama-server), Ollama, LM Studio...
-url = "http://127.0.0.1:8080"          # Ollama: "http://127.0.0.1:11434"
-model = "qwen3.5-4b"                    # name sent to the server; /models lists real ones
-model_label = "Qwen3.5 4B"              # shown in the banner and status line
-api_key = ""                            # only if your server needs one
-timeout = 180                           # seconds to wait for a reply
-context_size = 8192                     # fallback when the server doesn't report it
-autostart = true                        # start llama-server if it isn't running (localhost only)
-start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
-startup_timeout = 300                   # first start may download the model (~2.5 GB)
+url = {_q(s.url)}
+model = {_q(s.model)}
+model_label = {_q(s.model_label)}
+api_key = {_q(s.api_key)}
+timeout = {s.timeout:g}                           # seconds to wait for a reply
+context_size = {s.context_size}                     # fallback when the server doesn't report it
+autostart = {str(s.autostart).lower()}                        # start the server if nothing answers (localhost only)
+start_command = {_q(s.start_command)}
+startup_timeout = {s.startup_timeout:g}                   # the first start may download the model
 
 [chat]
 temperature = 0.7
@@ -146,17 +155,22 @@ max_output_chars = 8000                 # tool output is cut to this size
 command_timeout = 15
 
 [ui]
-banner = "full"                         # "full" or "compact"
+banner = {_q(banner)}                         # "full" or "compact"
 clear_on_start = true                   # clear the terminal before the banner
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
 """
 
 
-def write_example(path: Path | None = None, overwrite: bool = False) -> Path:
+EXAMPLE_CONFIG = render()
+
+
+def write_example(path: Path | None = None, overwrite: bool = False, text: str | None = None) -> Path:
     path = path or paths.CONFIG_FILE
     if path.exists() and not overwrite:
         raise FileExistsError(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(EXAMPLE_CONFIG, encoding="utf-8")
+    if path.exists():
+        path.replace(path.with_suffix(".toml.bak"))  # keep the old one, just in case
+    path.write_text(text or EXAMPLE_CONFIG, encoding="utf-8")
     return path
