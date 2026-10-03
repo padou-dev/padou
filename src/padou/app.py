@@ -16,7 +16,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 
-from padou import commands, paths, sessions, tools, ui
+from padou import brand, commands, paths, sessions, tools, ui
 from padou.client import Client, ServerError
 from padou.config import Config
 from padou.theme import Theme
@@ -72,6 +72,9 @@ class App:
         self.session = sessions.new(cfg.server.model, str(cwd))
         self.session.messages = [self.system_message()]
         self._last_interrupt = 0.0
+        self.banner: brand.Banner | None = None  # set when the first prompt should pulse the star
+        self.notes: list[tuple[str, str]] = []  # (kind, message) shown under that banner
+        self._t0 = time.monotonic()
 
     # ------------------------------------------------------------- sessions
 
@@ -235,10 +238,49 @@ class App:
     def _toolbar(self):
         speed = f"{self.last_speed:.0f} tok/s" if self.last_speed else "– tok/s"
         pct = f" ({int(100 * self.ctx_used / self.ctx_size)}%)" if self.ctx_size and self.ctx_used else ""
+        star = brand.mini(time.monotonic() - self._t0) if self.cfg.ui.animation else "✦"
         return [
-            ("class:tb.accent", f" {self.model_label}"),
+            ("class:tb.accent", f" {star} {self.model_label}"),
             ("class:tb", f" · {speed} · ctx {self.ctx_used}/{self.ctx_size}{pct} · /help "),
         ]
+
+    def _note_style(self, kind: str) -> tuple[str, str]:
+        th = self.theme
+        return {"error": (f"fg:{th.error}", "✗ "), "ok": (f"fg:{th.ok}", "✓ ")}.get(kind, (f"fg:{th.dim}", ""))
+
+    def _first_message(self):
+        """The first prompt carries the banner, so the star keeps pulsing while you think."""
+        from prompt_toolkit.application import get_app
+
+        t = time.monotonic() - self._t0
+        try:
+            done = get_app().is_done
+        except Exception:
+            done = False
+        frame = self.banner.still() if done else self.banner.pulse((t % brand.PULSE_PERIOD) / brand.PULSE_PERIOD)
+        out = ui.frame_to_ptk(frame)
+        if self.notes:
+            out.append(("", "\n"))
+            for kind, msg in self.notes:
+                style, mark = self._note_style(kind)
+                out.append((style, f"{mark}{msg}\n"))
+        out.append(("", "\n"))
+        out.append(("class:prompt", "❯ "))
+        return out
+
+    def _record_first_screen(self) -> None:
+        """Put the (still) banner into the /screenshot recording; it was drawn by prompt_toolkit."""
+        import io
+
+        real = ui.console.file
+        try:
+            ui.console.file = io.StringIO()
+            ui.console.print(ui.frame_to_text(self.banner.still()))
+            ui.console.print()
+            for kind, msg in self.notes:
+                {"error": ui.error, "ok": ui.success}.get(kind, ui.info)(self.theme, msg)
+        finally:
+            ui.console.file = real
 
     def run(self) -> int:
         paths.ensure_dirs()
@@ -274,8 +316,18 @@ class App:
         )
         while True:
             try:
-                ui.console.print()
-                line = prompt.prompt([("class:prompt", "❯ ")]).strip()
+                if self.banner is not None:
+                    try:
+                        line = prompt.prompt(self._first_message, refresh_interval=0.08).strip()
+                    finally:
+                        self._record_first_screen()
+                        self.banner = None
+                else:
+                    ui.console.print()
+                    line = prompt.prompt(
+                        [("class:prompt", "❯ ")],
+                        refresh_interval=0.25 if self.cfg.ui.animation else None,
+                    ).strip()
             except KeyboardInterrupt:
                 now = time.monotonic()
                 if now - self._last_interrupt < 2:

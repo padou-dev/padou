@@ -4,7 +4,8 @@
 
 First release.
 
-- Terminal chat with streaming Markdown, a Claude Code-style banner and status line
+- The compass star: a launch animation (dots gather from everywhere, παντού decodes to padou), rays that keep pulsing, and a pulsing star in the status line
+- Terminal chat with streaming Markdown and a status line
 - Read-only tools: `read_file`, `list_dir`, `search`, and 20 approved system commands
 - Safety rules: no shell, no sudo, validated arguments, secrets blocked (symlinks included), capped output
 - Slash commands: `/help`, `/clear`, `/models`, `/status`, `/copy`, `/tools`, `/resume`, `/compact`, `/doctor`, `/system`, `/exit`

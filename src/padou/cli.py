@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from padou import __version__, config, detect, doctor, paths, server, sessions, theme, ui
+from padou import __version__, brand, config, detect, doctor, paths, server, sessions, theme, ui
 from padou import setup as setup_wizard
 from padou.app import App
 from padou.client import Client
@@ -119,47 +119,71 @@ def main(argv=None) -> int:
 
         cwd = Path.cwd()
         app = App(cfg, th, client, cwd)
+        compact = args.compact or cfg.ui.banner == "compact"
+        animate = cfg.ui.animation and not compact and detect.is_tty() and ui.console.is_terminal
+        notes: list[tuple[str, str]] = []  # (kind, message), shown under the banner
+
+        def bring_up_server():
+            """Runs while the launch animation plays: health check, then autostart if needed."""
+            up, detail = client.health()
+            if not up and cfg.server.autostart and server.is_local(cfg.server.url) and "nothing is listening" in detail:
+                status["text"] = "starting the model server… (the first run downloads the model)"
+                proc, problem = server.start(cfg.server)
+                if proc is None:
+                    notes.append(("error", f"Couldn't start the model server: {problem}"))
+                    return False, problem
+                up, detail = server.wait_ready(client, proc, cfg.server.startup_timeout)
+                if up:
+                    notes.append(("ok", f"Model server started (pid {proc.pid}); it keeps running after padou exits."))
+                else:
+                    notes.append(("error", detail))
+                    for line in server.tail_log(4).splitlines():
+                        notes.append(("info", "  " + line[:110]))
+            return up, detail
+
+        status = {"text": ""}
         if cfg.ui.clear_on_start:
             ui.clear()
-        up, detail = ui.show_banner(th, app.model_label, cwd, args.compact or cfg.ui.banner == "compact", client.health)
+        banner = brand.Banner(
+            brand.Colors(th.accent, th.dim, th.bg), __version__, app.model_label, ui.short_path(cwd)
+        )
+        try:
+            if animate:
+                up, detail = ui.launch(banner, th, bring_up_server, lambda: status["text"])
+            else:
+                ui.console.print(ui.compact_banner(th, app.model_label) if compact else ui.frame_to_text(banner.still()))
+                ui.console.print()
+                with ui.ReplyView(th, "checking the model server…"):
+                    up, detail = bring_up_server()
+        except KeyboardInterrupt:
+            up, detail = False, "still starting"
+            notes.append(("info", "Stopped waiting; the model server keeps loading in the background."))
+
         for w in cfg.warnings:
-            ui.error(th, f"config: {w}")
-        if not up and cfg.server.autostart and server.is_local(cfg.server.url) and "nothing is listening" in detail:
-            up, detail = _autostart(cfg, th, client)
+            notes.insert(0, ("error", f"config: {w}"))
         if up:
             n_ctx = client.context_size()
             if n_ctx:
                 app.ctx_size = n_ctx
-        else:
-            ui.error(th, f"Model server not ready ({detail}). Start llama-server, then just type; run /doctor for details.")
+        elif detail != "still starting":
+            notes.append(("error", f"Model server not ready ({detail}). Start it, then just type; /doctor explains."))
+        notes.append(("info", "Type a message, or /help for commands."))
+
         if args.resume_last:
+            animate = False  # the resumed conversation prints first, so keep the banner still
+            ui.console.print(ui.frame_to_text(banner.still()))
             last = sessions.recent(1)
             if last:
                 app.resume(last[0])
             else:
-                ui.info(th, "No previous session to continue.")
-        ui.info(th, "Type a message, or /help for commands.")
+                notes.append(("info", "No previous session to continue."))
+        if animate:
+            app.banner = banner  # the first prompt keeps the star pulsing
+            app.notes = notes
+        else:
+            for kind, msg in notes:
+                {"error": ui.error, "ok": ui.success}.get(kind, ui.info)(th, msg)
         return app.run()
     finally:
         client.close()
 
-
-def _autostart(cfg, th, client) -> tuple[bool, str]:
-    proc, problem = server.start(cfg.server)
-    if proc is None:
-        ui.error(th, f"Couldn't start llama-server: {problem}")
-        return False, problem
-    try:
-        with ui.ReplyView(th, "starting llama-server… (first run downloads the model)"):
-            up, detail = server.wait_ready(client, proc, cfg.server.startup_timeout)
-    except KeyboardInterrupt:
-        ui.info(th, "(stopped waiting; llama-server keeps loading in the background)")
-        return False, "still starting"
-    if up:
-        ui.success(th, f"llama-server started (pid {proc.pid}). It keeps running after padou exits.")
-    else:
-        ui.error(th, detail)
-        log = server.tail_log()
-        if log:
-            ui.info(th, log)
-    return up, detail

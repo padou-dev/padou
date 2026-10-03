@@ -61,6 +61,7 @@ class ToolsConfig:
 class UIConfig:
     banner: str = "full"  # "full" or "compact"
     clear_on_start: bool = True
+    animation: bool = True  # the compass-star launch and pulse
     accent: str = ""  # hex colour override, e.g. "#ff5fa2"; empty = from theme
     show_tool_output: bool = False
 
@@ -167,6 +168,7 @@ folders = []                            # always readable, e.g. ["~/Projects", "
 [ui]
 banner = {_q(banner)}                         # "full" or "compact"
 clear_on_start = true                   # clear the terminal before the banner
+animation = true                        # animated compass star (false = still)
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
 """

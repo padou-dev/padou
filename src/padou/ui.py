@@ -58,53 +58,118 @@ def short_path(p: Path | str) -> str:
 # --------------------------------------------------------------------- banner
 
 
-def banner(theme: Theme, model_label: str, cwd: Path, cursor: bool = True, compact: bool = False, steady_blink: bool = False) -> Text:
-    info1 = Text.assemble((f"padou v{__version__}", "bold"), (" · παντού", theme.dim))
-    info2 = Text(f"{model_label} · local · read-only", style=theme.dim)
-    info3 = Text(short_path(cwd), style=theme.dim)
-    if compact:
-        return Text.assemble(("❯_ ", f"bold {theme.accent}"), info1, ("  ", ""), info2)
-
-    frame = theme.accent
-    blink = "▌" if cursor else " "
-    # steady_blink: let the terminal itself blink the cursor forever (SGR 5).
-    # Most terminals honour it; some (e.g. Alacritty) show a solid block instead.
-    cursor_style = f"{theme.accent} blink" if steady_blink else theme.accent
-    rows = [
-        (Text("  ┌───────┐", style=frame), info1),
-        (Text.assemble(("  │ ", frame), (">_", "bold"), ("  ", ""), (blink, cursor_style), (" │", frame)), info2),
-        (Text("  └──┬─┬──┘", style=frame), info3),
-        (Text("   ──┴─┴──", style=frame), Text("")),
-    ]
+def frame_to_text(frame) -> Text:
+    """A brand frame as rich Text."""
     out = Text()
-    for i, (art, info) in enumerate(rows):
-        out.append_text(art)
-        out.append("  ")
-        out.append_text(info)
-        if i < len(rows) - 1:
+    for i, row in enumerate(frame):
+        for text, color, bold in row:
+            style = " ".join(x for x in ("bold" if bold else "", color or "") if x)
+            out.append(text, style=style or None)
+        if i < len(frame) - 1:
             out.append("\n")
     return out
 
 
-def show_banner(theme: Theme, model_label: str, cwd: Path, compact: bool, check) -> tuple[bool, str]:
-    """Draw the banner; the cursor blinks while `check()` (the health check) runs."""
+def frame_to_ptk(frame) -> list[tuple[str, str]]:
+    """A brand frame as prompt_toolkit formatted text."""
+    out: list[tuple[str, str]] = []
+    for row in frame:
+        for text, color, bold in row:
+            style = " ".join(x for x in ("bold" if bold else "", f"fg:{color}" if color else "") if x)
+            out.append((style, text))
+        out.append(("", "\n"))
+    return out
+
+
+def compact_banner(theme: Theme, model_label: str) -> Text:
+    return Text.assemble(
+        ("✦ ", f"bold {theme.accent}"), (f"padou v{__version__}", "bold"), (" · παντού", theme.dim),
+        ("  ", ""), (f"{model_label} · local · read-only", theme.dim),
+    )
+
+
+class _Keys:
+    """Notice a keypress (to skip the launch) without echoing it. POSIX terminals only."""
+
+    def __init__(self):
+        self.old = None
+        try:
+            import termios
+            import tty
+
+            if os.isatty(0):
+                self.old = termios.tcgetattr(0)
+                tty.setcbreak(0)
+        except Exception:
+            self.old = None
+
+    def pressed(self) -> bool:
+        if self.old is None:
+            return False
+        import select
+
+        if select.select([0], [], [], 0)[0]:
+            os.read(0, 1024)  # swallow it, so it doesn't land in the prompt
+            return True
+        return False
+
+    def close(self) -> None:
+        if self.old is not None:
+            import termios
+
+            termios.tcsetattr(0, termios.TCSADRAIN, self.old)
+
+
+def launch(banner, theme: Theme, worker, status=lambda: "") -> object:
+    """Play the launch animation while `worker()` runs (health check, autostart...).
+
+    The star keeps pulsing until the worker is done; `status()` returns a line
+    shown under the star (e.g. "starting llama-server…"). Any key skips the
+    launch part. The drawing is transient: the first prompt redraws the banner
+    in the same place and keeps it pulsing.
+    """
+    from padou import brand
+
     result: list = []
-    worker = threading.Thread(target=lambda: result.append(check()), daemon=True)
-    worker.start()
-    if compact or not console.is_terminal:
-        worker.join()
-        console.print(banner(theme, model_label, cwd, compact=compact, steady_blink=True))
-    else:
-        with Live(banner(theme, model_label, cwd), console=console, refresh_per_second=10, transient=False) as live:
-            on = True
-            started = time.monotonic()
-            while worker.is_alive() or time.monotonic() - started < 0.6:
-                time.sleep(0.35)
-                on = not on
-                live.update(banner(theme, model_label, cwd, cursor=on))
-            live.update(banner(theme, model_label, cwd, cursor=True, steady_blink=True))
-    console.print()
-    return result[0] if result else (False, "health check failed")
+    errors: list = []
+
+    def run():
+        try:
+            result.append(worker())
+        except BaseException as exc:  # handed back to the main thread
+            errors.append(exc)
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    keys = _Keys()
+    spinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    started = time.monotonic()
+    skipped = False
+    try:
+        with Live(console=console, refresh_per_second=30, transient=True) as live:
+            while True:
+                t = time.monotonic() - started
+                if not skipped and keys.pressed():
+                    skipped = True
+                if t < brand.LAUNCH_SECONDS and not skipped:
+                    frame = banner.launch(t)
+                else:
+                    frame = banner.pulse((t % brand.PULSE_PERIOD) / brand.PULSE_PERIOD)
+                body = frame_to_text(frame)
+                line = status()
+                if line:
+                    body.append("\n\n")
+                    body.append(f"  {spinner[int(t * 12) % len(spinner)]} {line}", style=theme.dim)
+                live.update(body)
+                done = not thread.is_alive()
+                if done and (t >= brand.LAUNCH_SECONDS or skipped):
+                    break
+                time.sleep(1 / 30)
+    finally:
+        keys.close()
+    if errors:
+        raise errors[0]
+    return result[0] if result else None
 
 
 # --------------------------------------------------------------- streaming

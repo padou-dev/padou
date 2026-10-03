@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="482" height="179" viewBox="0 0 482 179">
+<style>@keyframes shoot{0%{opacity:0}8%{opacity:1}30%{opacity:.55}55%{opacity:.25}75%,100%{opacity:0}}.r{animation:shoot 1.2s linear infinite;opacity:0}.s1{animation-delay:0s}.s2{animation-delay:.3s}.s3{animation-delay:.6s}@media (prefers-reduced-motion:reduce){.r{animation:none;opacity:1}}</style>
+<rect width="482" height="179" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="480" height="177" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="241.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou</text>
+<g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14">
+<text x="89.4" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">◆</text>
+<rect x="92.9" y="78" width="1.6" height="17" fill="#ff5fa2" class="r s1"/>
+<rect x="92.9" y="61" width="1.6" height="17" fill="#ff5fa2" class="r s2"/>
+<rect x="92.9" y="44" width="1.6" height="17" fill="#ff5fa2" class="r s3"/>
+<rect x="92.9" y="112" width="1.6" height="17" fill="#ff5fa2" class="r s1"/>
+<rect x="92.9" y="129" width="1.6" height="17" fill="#ff5fa2" class="r s2"/>
+<rect x="92.9" y="146" width="1.6" height="17" fill="#ff5fa2" class="r s3"/>
+<text x="106.3" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">─</text>
+<text x="114.7" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">─</text>
+<text x="123.2" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">─</text>
+<text x="131.6" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">─</text>
+<text x="140.0" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s3">─</text>
+<text x="148.4" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s3">─</text>
+<text x="72.6" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">─</text>
+<text x="64.2" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">─</text>
+<text x="55.7" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">─</text>
+<text x="47.3" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">─</text>
+<text x="38.9" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s3">─</text>
+<text x="30.4" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s3">─</text>
+<text x="106.3" y="91" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">╱</text>
+<text x="123.2" y="74" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">╱</text>
+<text x="72.6" y="91" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">╲</text>
+<text x="55.7" y="74" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">╲</text>
+<text x="106.3" y="125" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">╲</text>
+<text x="123.2" y="142" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">╲</text>
+<text x="72.6" y="125" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s1">╱</text>
+<text x="55.7" y="142" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs" class="r s2">╱</text>
+<text x="190.6" y="91" fill="#c8cde8" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">padou</text>
+<text x="232.8" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.1.0 · παντού</text>
+<text x="190.6" y="108" fill="#7f849c" textLength="252.9" lengthAdjust="spacingAndGlyphs">Qwen3.5 4B · local · read-only</text>
+<text x="190.6" y="125" fill="#7f849c" textLength="134.9" lengthAdjust="spacingAndGlyphs">~/Projects/padou</text>
+</g></svg>

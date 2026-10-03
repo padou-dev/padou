@@ -30,6 +30,8 @@ class Theme:
     ok: str = "#9ece6a"
     warn: str = "#e0af68"
     error: str = "#f7768e"
+    bg: str = "#16161e"  # terminal background, used to fade the star's rays
+    fg: str = "#c8cde8"
     source: str = "built-in"
 
 
@@ -55,6 +57,8 @@ def _from_colors_toml(d: Path) -> dict | None:
         "ok": _hex(flat.get("color2")) or _hex(flat.get("green")),
         "warn": _hex(flat.get("color3")) or _hex(flat.get("yellow")),
         "error": _hex(flat.get("color1")) or _hex(flat.get("red")),
+        "bg": _hex(flat.get("background")),
+        "fg": _hex(flat.get("foreground")),
     }
 
 
@@ -65,12 +69,15 @@ def _from_alacritty(d: Path) -> dict | None:
     data = tomllib.loads(f.read_text(encoding="utf-8"))
     colors = data.get("colors", {})
     normal, bright = colors.get("normal", {}), colors.get("bright", {})
+    primary = colors.get("primary", {})
     return {
         "accent": _hex(normal.get("blue")) or _hex(bright.get("blue")),
         "dim": _hex(bright.get("black")),
         "ok": _hex(normal.get("green")),
         "warn": _hex(normal.get("yellow")),
         "error": _hex(normal.get("red")),
+        "bg": _hex(primary.get("background")),
+        "fg": _hex(primary.get("foreground")),
     }
 
 
@@ -96,6 +103,8 @@ def _from_key_value(f: Path, sep: str) -> dict | None:
         "ok": _hex(found.get("color2")),
         "warn": _hex(found.get("color3")),
         "error": _hex(found.get("color1")),
+        "bg": _hex(found.get("background")),
+        "fg": _hex(found.get("foreground")),
     }
 
 

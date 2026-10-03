@@ -2,6 +2,8 @@
 
 A lightweight, local-first AI assistant for your terminal, built for small models running on a laptop.
 
+<p align="center"><img src="docs/screenshots/banner.svg" alt="padou's compass star, its rays shooting outward" width="480"></p>
+
 <p align="center"><img src="docs/screenshots/chat.svg" alt="padou answering questions with its read-only tools" width="760"></p>
 
 padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools. Nothing leaves your machine except the requests padou sends to the server you configure.
@@ -14,6 +16,7 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 
 ## Features
 
+- **The compass star:** padou's mark. παντού means "everywhere", in every direction: on launch, dots gather from everywhere into the star while παντού decodes into padou, and the rays keep shooting outward. Turn it off with `[ui] animation = false`.
 - **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
 - **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands (`df`, `journalctl -u`, `systemctl status`, `pacman -Q`…).
 - **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (`~/.ssh`, `~/.gnupg`, keyrings, `.env`, private keys, browser profiles) blocked even through symlinks.
@@ -240,6 +243,7 @@ max_output_chars = 8000
 [ui]
 banner = "full"        # or "compact"
 clear_on_start = true  # clear the terminal before the banner
+animation = true       # the compass-star launch and pulse
 accent = ""            # e.g. "#ff5fa2"; empty = Omarchy theme accent
 ```
 
