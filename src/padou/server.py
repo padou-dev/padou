@@ -67,3 +67,83 @@ def tail_log(lines: int = 8) -> str:
         return "\n".join(paths.SERVER_LOG.read_text(errors="replace").splitlines()[-lines:])
     except OSError:
         return ""
+
+
+# --------------------------------------------------------------------------- #
+# Finding, inspecting and stopping the server (for /server)
+# --------------------------------------------------------------------------- #
+
+import os  # noqa: E402
+import signal  # noqa: E402
+from dataclasses import dataclass  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+
+@dataclass
+class Proc:
+    pid: int
+    command: str
+    rss_mb: float | None  # memory in RAM; GPU memory isn't visible from here
+
+
+def find(cfg: ServerConfig) -> list[Proc]:
+    """Running server processes owned by this user that match start_command's program."""
+    try:
+        program = os.path.basename(shlex.split(cfg.start_command)[0])
+    except (ValueError, IndexError):
+        program = "llama-server"
+    found = []
+    uid = os.getuid() if hasattr(os, "getuid") else None
+    for entry in Path("/proc").glob("[0-9]*"):
+        try:
+            if uid is not None and entry.stat().st_uid != uid:
+                continue
+            argv = (entry / "cmdline").read_bytes().split(b"\0")
+            if not argv or not argv[0]:
+                continue
+            if os.path.basename(argv[0].decode(errors="replace")) != program:
+                continue
+            if program == "ollama" and b"serve" not in argv:
+                continue  # `ollama run` etc. are clients, not the server
+            rss = None
+            for line in (entry / "status").read_text().splitlines():
+                if line.startswith("VmRSS:"):
+                    rss = int(line.split()[1]) / 1024
+            cmd = " ".join(a.decode(errors="replace") for a in argv if a)
+            found.append(Proc(int(entry.name), cmd, rss))
+        except (OSError, ValueError):
+            continue
+    return found
+
+
+def stop(procs: list[Proc], wait: float = 8.0) -> list[int]:
+    """Ask the processes to quit (SIGTERM), wait, then force (SIGKILL). Returns the PIDs stopped."""
+    stopped = []
+    for p in procs:
+        try:
+            os.kill(p.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            stopped.append(p.pid)
+        except PermissionError:
+            continue
+    deadline = time.monotonic() + wait
+    pending = [p.pid for p in procs if p.pid not in stopped]
+    while pending and time.monotonic() < deadline:
+        time.sleep(0.25)
+        still = []
+        for pid in pending:
+            try:
+                os.kill(pid, 0)
+                still.append(pid)
+            except ProcessLookupError:
+                stopped.append(pid)
+            except PermissionError:
+                pass
+        pending = still
+    for pid in pending:
+        try:
+            os.kill(pid, signal.SIGKILL)
+            stopped.append(pid)
+        except (ProcessLookupError, PermissionError):
+            pass
+    return stopped

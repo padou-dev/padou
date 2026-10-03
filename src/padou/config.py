@@ -37,6 +37,7 @@ class ServerConfig:
         "--reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
     )
     startup_timeout: float = 300.0  # seconds; the first start may download the model
+    stop_on_exit: bool = False  # stop the server padou started when you quit (default: keep it running)
 
 
 @dataclass
@@ -150,6 +151,7 @@ context_size = {s.context_size}                     # fallback when the server d
 autostart = {str(s.autostart).lower()}                        # start the server if nothing answers (localhost only)
 start_command = {_q(s.start_command)}
 startup_timeout = {s.startup_timeout:g}                   # the first start may download the model
+stop_on_exit = {str(s.stop_on_exit).lower()}                     # stop a server padou started when you quit
 
 [chat]
 temperature = 0.7

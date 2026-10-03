@@ -28,15 +28,16 @@ def parse_args(argv=None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-NOTICE_FILE = paths.DATA_DIR / "notice-accepted"
+NOTICE_FILE = paths.DATA_DIR / "notice-v2-accepted"  # bump the version when the notice changes
 
 NOTICE = """padou is free, open-source software provided AS IS, without warranty of any kind.
 
 • AI answers can be wrong, even when they sound confident. Review every
   command before you run it: you are responsible for what you run.
 • Don't rely on padou for medical, legal, financial or safety decisions.
-• Its tools are designed to be read-only and to skip secret locations,
-  but that is a safeguard, not a guarantee.
+• padou is read-only unless you turn on write mode (/write). You
+  approve every file change, and each one is your responsibility.
+• Its safety limits are safeguards, not guarantees.
 • Models and model servers are third-party software with their own licences.
 
 Full text: DISCLAIMER.md in the project, or https://github.com/padou-dev/padou"""
@@ -134,7 +135,9 @@ def main(argv=None) -> int:
                     return False, problem
                 up, detail = server.wait_ready(client, proc, cfg.server.startup_timeout)
                 if up:
-                    notes.append(("ok", f"Model server started (pid {proc.pid}); it keeps running after padou exits."))
+                    app.started_pid = proc.pid
+                    keep = "it stops when you quit" if cfg.server.stop_on_exit else "it keeps running after padou exits"
+                    notes.append(("ok", f"Model server started (pid {proc.pid}); {keep}. /server manages it."))
                 else:
                     notes.append(("error", detail))
                     for line in server.tail_log(4).splitlines():

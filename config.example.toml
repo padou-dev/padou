@@ -12,6 +12,7 @@ context_size = 8192                     # fallback when the server doesn't repor
 autostart = true                        # start the server if nothing answers (localhost only)
 start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
 startup_timeout = 300                   # the first start may download the model
+stop_on_exit = false                     # stop a server padou started when you quit
 
 [chat]
 temperature = 0.7

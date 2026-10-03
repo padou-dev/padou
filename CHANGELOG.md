@@ -14,6 +14,8 @@ First release.
 - Folder access: tools read only the start folder by default; `/folder add|remove|anywhere|restrict`, `[tools] scope` and `folders`
 - Disclaimer (DISCLAIMER.md) and a one-time notice on first run
 - Windows (WSL) install guide; `/copy` uses `clip.exe` under WSL
+- Write mode: `/write <folder>`, `edit_file`/`write_file` with a diff and approval for every change, backups, `/undo`, `/changes`
+- `/server` status, stop, restart and log; `[server] stop_on_exit`
 - `padou setup`: first-run wizard that detects OS, GPU, RAM and model servers, recommends a model and writes the config
 - Starts llama-server (or `ollama serve`) automatically when nothing is running on localhost
 - Works with llama.cpp, Ollama and LM Studio

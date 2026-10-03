@@ -252,6 +252,38 @@ def table(theme: Theme, title: str, columns: list[str], rows: list[list], styles
     console.print(t)
 
 
+def show_change(theme: Theme, change, max_lines: int = 80) -> None:
+    """A proposed file change as a coloured diff."""
+    added, removed = change.stats
+    verb = "Edit" if change.kind == "edit" else "Create"
+    console.print(Text.assemble(("✎ ", f"bold {theme.warn}"), (f"{verb} {short_path(change.path)}", "bold"),
+                                (f"  +{added} −{removed}", theme.dim)))
+    if change.reason:
+        console.print(Text(f"  {change.reason}", style=theme.dim))
+    lines = change.diff()[2:]  # skip the ---/+++ header lines
+    for line in lines[:max_lines]:
+        if line.startswith("+"):
+            style = theme.ok
+        elif line.startswith("-"):
+            style = theme.error
+        elif line.startswith("@@"):
+            style = theme.accent
+        else:
+            style = theme.dim
+        console.print(Text("  " + line, style=style), soft_wrap=True)
+    if len(lines) > max_lines:
+        console.print(Text(f"  … {len(lines) - max_lines} more diff lines", style=theme.dim))
+
+
+def confirm(question: str, default: bool = False) -> bool:
+    from rich.prompt import Confirm
+
+    try:
+        return Confirm.ask(question, default=default, console=console)
+    except (KeyboardInterrupt, EOFError):
+        return False
+
+
 def markdown(text: str) -> None:
     console.print(md(text))
 

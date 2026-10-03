@@ -18,9 +18,13 @@ padou passes your questions to a language model running on your own machine. Lan
 
 padou is not designed, tested or suitable for medical, legal, financial, safety-critical, security-critical or other high-stakes decisions. Do not rely on it for them.
 
-## Read-only by design, not by guarantee
+## Write mode: you approve, you are responsible
 
-padou's tools are designed to be read-only: they run no shell, never use `sudo`, validate their arguments, and block known secret locations (SSH keys, password stores, `.env` files and similar). These safeguards reduce risk; **they are not a guarantee**. Software has bugs, and a tool that reads files can still show their contents to the model and on your screen. Only run padou on systems and data you are entitled to access, and don't point it at folders containing information you aren't comfortable having read.
+padou is read-only unless **you** turn on write mode with `/write <folder>`. In write mode padou can edit and create text files in the folder you chose, but only after showing you each change and getting your approval. **Every change you approve is your decision and your responsibility.** Read each diff carefully: language models can propose wrong, incomplete or destructive edits, and text inside files you ask padou to read can try to manipulate the model into proposing changes you didn't ask for ("prompt injection"). Backups and `/undo` are a convenience, not a guarantee. Keep your own backups, and use version control such as Git.
+
+## Safeguards, not guarantees
+
+padou's read tools are designed to be read-only: they run no shell, never use `sudo`, validate their arguments, and block known secret locations (SSH keys, password stores, `.env` files and similar). Write mode adds its own limits (approval for every change, backups, no deleting, no system or hidden folders). These safeguards reduce risk; **they are not a guarantee**. Software has bugs, and a tool that reads files can still show their contents to the model and on your screen. Only run padou on systems and data you are entitled to access, and don't point it at folders containing information you aren't comfortable having read.
 
 ## Third-party software and models
 

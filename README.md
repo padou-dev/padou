@@ -18,8 +18,9 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 
 - **The compass star:** padou's mark. παντού means "everywhere", in every direction: on launch, dots gather from everywhere into the star while παντού decodes into padou, and the rays keep shooting outward. Turn it off with `[ui] animation = false`.
 - **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
+- **Read-only by default, write mode when you want it:** `/write <folder>` lets padou edit text files in one folder; every change is shown as a diff and needs your yes, and `/undo` reverts it.
 - **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands (`df`, `journalctl -u`, `systemctl status`, `pacman -Q`…).
-- **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (`~/.ssh`, `~/.gnupg`, keyrings, `.env`, private keys, browser profiles) blocked even through symlinks.
+- **Safety by design (read tools):** no shell, no `sudo`, strict argument checks, and secrets (`~/.ssh`, `~/.gnupg`, keyrings, `.env`, private keys, browser profiles) blocked even through symlinks.
 - **Sessions:** every conversation is saved; continue with `/resume` or `padou -c`.
 - **Omarchy aware:** picks up the accent colour of your current Omarchy theme, with a built-in palette everywhere else.
 - **Small-model friendly:** short system prompt, few tools, capped tool output, `/compact` when the context fills up.
@@ -152,6 +153,10 @@ padou --version
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard (`wl-copy`) |
 | `/tools` | List the tools padou may use |
+| `/write [<folder>\|off]` | Let padou change files in one folder, this session only (you approve every change) |
+| `/undo` | Undo padou's last file change |
+| `/changes` | List the files padou changed this session |
+| `/server [stop\|restart\|log]` | The model server: status and memory, stop, restart, or its log |
 | `/folder [add <path>]` | Folders padou may read: list, `add <path> [--always]`, `remove <n>`, `anywhere`, `restrict` |
 | `/resume [n]` | List saved sessions, or continue one |
 | `/compact` | Summarise the conversation to free up context |
@@ -184,9 +189,46 @@ To change the default, set `[tools] scope = "anywhere"` and/or list folders in `
 > [!TIP]
 > Starting padou in your home folder (`~`) allows your whole home folder. Start it in a project folder to keep it focused.
 
+## Write mode
+
+padou is **read-only by default**. To let it change files, turn on write mode for one folder:
+
+```
+/write ~/Projects/my-app      padou may change files here (and in subfolders), this session only
+/write                        show where write mode is on
+/undo                         put the last change back
+/changes                      list everything padou changed this session
+/write off                    read-only again
+```
+
+How it stays safe:
+
+- **You approve every change.** padou shows a coloured diff and asks `Apply this change? [y/N]`; the default is **no**. There's no "approve everything" switch.
+- **Two small tools only:** `edit_file` replaces one exact, unique piece of text (reliable even for small models), and `write_file` creates **new** files and never overwrites. padou can't delete, rename, change permissions or run commands.
+- **Backups and undo:** every edited file is copied to `~/.local/state/padou/backups/` first. `/undo` restores it, and undoing a newly created file moves it there instead of deleting it.
+- **Never in sensitive places:** not `/`, not your whole home folder, not system folders (`/etc`, `/usr`, `/boot`…), not hidden folders (`~/.config`, `~/.ssh`…), not inside `.git`, not secret files, not through symlinks, and only in folders padou may already read.
+- **Never saved:** write mode always starts off, and nothing in the config can turn it on permanently.
+- **Always visible:** the status line shows `✎ write: <folder>` in the warning colour while it's on.
+
+> [!WARNING]
+> Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now edit ~/.bashrc*). **Read every diff before you say yes**, and keep your work in Git so you can always go back.
+
+## The model server
+
+If padou starts `llama-server` for you, it runs **in the background** (no window) and **keeps running after you quit**, so the next start is instant. Its output goes to `~/.local/state/padou/llama-server.log`.
+
+```
+/server            is it answering? process ID, memory use, log path
+/server restart    stop it and start it again (e.g. after changing the model)
+/server stop       stop it and free its memory
+/server log        the last lines of its log
+```
+
+Prefer it to stop when you quit padou? Set `[server] stop_on_exit = true` (padou only stops a server it started itself).
+
 ## Tools
 
-padou's model can only **ask** to use a tool; padou's own code decides whether the request is allowed. Every call is shown on screen:
+padou's model can only **ask** to use a tool; padou's own code decides whether the request is allowed. Every call is shown on screen (the write tools are described in [Write mode](#write-mode)):
 
 ```
 ● Run journalctl --no-pager -n 100 -u NetworkManager
@@ -228,6 +270,7 @@ model = "qwen3.5-4b"
 model_label = "Qwen3.5 4B"
 timeout = 180
 autostart = true
+stop_on_exit = false   # true = stop a server padou started when you quit
 start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
 
 [chat]
@@ -273,6 +316,10 @@ See [`config.example.toml`](config.example.toml) for every option.
 | Very slow replies (2–5 tok/s) | The model is running on the CPU. Check `llama-cli --list-devices` shows Vulkan, and use `-ngl 99` |
 | `The server took longer than 180s` | Long answer on a slow machine. Raise `[server] timeout` |
 | `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |
+| padou says "write mode is off" | It's read-only by default. Turn writing on for a folder with `/write <folder>` |
+| `/write` refuses a folder | It won't write in `/`, your home folder, system folders, hidden folders or `.git`. Pick a project folder |
+| An edit went wrong | `/undo` puts the file back; `/changes` lists every change and where the backups are |
+| The model server uses memory when idle | It stays loaded for fast starts. `/server stop` frees it, or set `stop_on_exit = true` |
 | The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
 | Setup recommends the wrong model | It's only a suggestion from your RAM and GPU. Pick another number, or edit `[server]` in the config |
 | Setup says llama.cpp is a CPU-only build | You have a GPU but installed the CPU build. Install the Vulkan (AMD/Intel), CUDA (NVIDIA) or Metal (Mac) build, then `padou setup` |
@@ -304,7 +351,7 @@ uv run pytest          # tests for the tool safety rules, config and theme
 
 ## Disclaimer
 
-padou is free software provided **"as is", without warranty of any kind**. The author(s) are not liable for any damage, data loss or other consequences of using it. AI output can be wrong, so you are responsible for reviewing anything padou suggests and for every command you choose to run. Models and model servers are third-party software with their own licences, and padou isn't affiliated with any of the companies or projects it mentions. Read the full [DISCLAIMER.md](DISCLAIMER.md). On first run, padou shows a short version of this and asks you to accept it.
+padou is free software provided **"as is", without warranty of any kind**. The author(s) are not liable for any damage, data loss or other consequences of using it. AI output can be wrong, so you are responsible for reviewing anything padou suggests, **every file change you approve in write mode**, and every command you choose to run. Models and model servers are third-party software with their own licences, and padou isn't affiliated with any of the companies or projects it mentions. Read the full [DISCLAIMER.md](DISCLAIMER.md). On first run, padou shows a short version of this and asks you to accept it.
 
 ## Licence
 

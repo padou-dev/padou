@@ -114,6 +114,10 @@ def cmd_tools(app: "App", arg: str):
         for c in tools.APPROVED_COMMANDS.values():
             rows.append([f"run: {c.name}", c.description + (f"  [{c.arg_name}]" if c.arg_name else "")])
     ui.table(app.theme, "Read-only tools", ["Tool", "What it does"], rows, styles=[app.theme.accent, ""])
+    if app.write_roots:
+        rows.append(["edit_file", "Change one exact piece of text in a file (you approve it)"])
+        rows.append(["write_file", "Create a new file (you approve it)"])
+        ui.table(app.theme, "Write tools (write mode is on)", ["Tool", "What it does"], rows[-2:], styles=[app.theme.warn, ""])
     ui.info(app.theme, "Blocked for safety: ~/.ssh, ~/.gnupg, keyrings, password stores, browser profiles, .env files, private keys.")
 
 
@@ -241,6 +245,139 @@ def cmd_folder(app: "App", arg: str):
     ui.error(th, "Usage: /folder [list | add <path> [--always] | remove <n> | anywhere | restrict]")
 
 
+def cmd_write(app: "App", arg: str):
+    import os
+    from pathlib import Path
+
+    from padou import writes
+
+    th = app.theme
+    arg = arg.strip()
+    if not arg:
+        if not app.write_roots:
+            ui.info(th, "Write mode is off: padou can't change any file.")
+            ui.info(th, "Turn it on for one folder (and its subfolders), this session only: /write <folder>")
+        else:
+            rows = [[str(i), ui.short_path(r)] for i, r in enumerate(app.write_roots, 1)]
+            ui.table(th, "padou may change files in", ["#", "Folder"], rows, styles=[th.warn, ""])
+            ui.info(th, "Every change is shown first and needs your yes. /undo reverts · /write off stops")
+        return
+    if arg.lower() in ("off", "stop", "no"):
+        app.write_roots.clear()
+        app.refresh_system_prompt()
+        ui.success(th, "Write mode is off. padou is read-only again.")
+        return
+    p = Path(os.path.expanduser(arg))
+    if not p.is_absolute():
+        p = app.cwd / p
+    try:
+        folder = writes.check_write_root(p, app.folders)
+    except writes.WriteError as exc:
+        ui.error(th, str(exc))
+        return
+    if folder not in app.write_roots:
+        app.write_roots.append(folder)
+    app.refresh_system_prompt()
+    ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Write mode on for ", "bold"), (ui.short_path(folder), f"bold {th.warn}"),
+                                   (" (and its subfolders), this session only.", "")))
+    ui.info(th, "padou can edit existing text files and create new ones there. It can't delete, rename or run anything.")
+    ui.info(th, "You'll see every change as a diff and approve it. Backups are kept: /undo, /changes. Stop with /write off.")
+
+
+def cmd_undo(app: "App", arg: str):
+    from padou import writes
+
+    pending = [a for a in app.changes if not a.undone]
+    if not pending:
+        ui.info(app.theme, "Nothing to undo.")
+        return
+    last = pending[-1]
+    try:
+        msg = writes.undo(last, app.session.id)
+    except (writes.WriteError, OSError) as exc:
+        ui.error(app.theme, str(exc))
+        return
+    ui.success(app.theme, f"Undone: {msg}")
+    app.session.messages.append({"role": "user", "content": f"(note: I undid your change to {last.change.path}; it's back as it was)"})
+    app.session.messages.append({"role": "assistant", "content": "Understood."})
+
+
+def cmd_changes(app: "App", arg: str):
+    if not app.changes:
+        ui.info(app.theme, "padou hasn't changed any files this session.")
+        return
+    rows = []
+    for i, a in enumerate(app.changes, 1):
+        added, removed = a.change.stats
+        state = Text("undone", style=app.theme.dim) if a.undone else Text("applied", style=app.theme.ok)
+        rows.append([str(i), a.when, "edited" if a.change.kind == "edit" else "created", ui.short_path(a.change.path), f"+{added} −{removed}", state])
+    ui.table(app.theme, "Changes this session", ["#", "Time", "What", "File", "Lines", ""], rows,
+             styles=[app.theme.dim, app.theme.dim, "", "bold", app.theme.dim, ""])
+    ui.info(app.theme, f"Backups: {ui.short_path(writes_backup_dir(app))}  ·  /undo reverts the last one")
+
+
+def writes_backup_dir(app: "App"):
+    from padou import writes
+
+    return writes.backup_dir(app.session.id)
+
+
+def cmd_server(app: "App", arg: str):
+    from padou import paths, server
+
+    th, cfg = app.theme, app.cfg.server
+    action = arg.strip().lower()
+    local = server.is_local(cfg.url)
+    if action in ("", "status"):
+        up, detail = app.client.health()
+        procs = server.find(cfg) if local else []
+        rows = [["Address", cfg.url], ["Answering", "yes" if up else f"no ({detail})"]]
+        if procs:
+            for p in procs:
+                mem = f"{p.rss_mb / 1024:.1f} GB RAM" if p.rss_mb and p.rss_mb > 1024 else (f"{p.rss_mb:.0f} MB RAM" if p.rss_mb else "?")
+                rows.append([f"Process {p.pid}", f"{mem} · {p.command[:70]}"])
+        elif local:
+            rows.append(["Process", "none found for this user (it may be a system service)"])
+        rows += [["Log", ui.short_path(paths.SERVER_LOG)], ["On quit", "stops it" if cfg.stop_on_exit else "keeps running"]]
+        ui.table(th, "Model server", ["", ""], rows, styles=["bold", th.dim])
+        ui.info(th, "/server stop · /server restart · /server log  (GPU memory isn't included in the RAM figure)")
+        return
+    if not local:
+        ui.error(th, "That server isn't on this machine, so padou can't control it.")
+        return
+    if action == "log":
+        text = server.tail_log(25)
+        ui.console.print(Text(text or "(the log is empty: padou hasn't started a server yet)", style=th.dim))
+        return
+    if action in ("stop", "restart"):
+        procs = server.find(cfg)
+        if procs:
+            stopped = server.stop(procs)
+            ui.success(th, f"Stopped the model server (pid {', '.join(map(str, stopped)) or '?'}).")
+        elif action == "stop":
+            ui.info(th, "No model server process found for this user. If it runs as a service: sudo systemctl stop <name>")
+            return
+        if action == "stop":
+            return
+        proc, problem = server.start(cfg)
+        if proc is None:
+            ui.error(th, problem)
+            return
+        try:
+            with ui.ReplyView(th, "starting the model server…"):
+                up, detail = server.wait_ready(app.client, proc, cfg.startup_timeout)
+        except KeyboardInterrupt:
+            ui.info(th, "(stopped waiting; it keeps loading in the background)")
+            return
+        if up:
+            app.started_pid = proc.pid
+            ui.success(th, f"Model server restarted (pid {proc.pid}).")
+        else:
+            ui.error(th, detail)
+        return
+    ui.error(th, "Usage: /server [status | stop | restart | log]")
+
+
 def cmd_system(app: "App", arg: str):
     ui.markdown("```text\n" + app.session.messages[0]["content"] + "\n```")
 
@@ -253,6 +390,10 @@ COMMANDS: dict[str, Command] = {
     "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),
     "tools": Command(cmd_tools, "List the tools padou may use"),
     "folder": Command(cmd_folder, "Folders padou may read: list, add, remove", "[add <path>]"),
+    "write": Command(cmd_write, "Let padou change files in one folder (you approve each change)", "[<folder>|off]"),
+    "undo": Command(cmd_undo, "Undo padou's last file change"),
+    "changes": Command(cmd_changes, "List the files padou changed this session"),
+    "server": Command(cmd_server, "Model server: status, stop, restart, log", "[stop|restart|log]"),
     "resume": Command(cmd_resume, "List saved sessions, or continue one", "[n]"),
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),
