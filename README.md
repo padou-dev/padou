@@ -37,7 +37,7 @@ Small models are fast and private, but they're not Claude or GPT. They're good a
 
 ### 1. Run a model server
 
-With llama.cpp (Vulkan build on AMD/Intel GPUs):
+padou **starts llama-server for you** when nothing is answering on localhost (see [Autostart](#autostart)), so if `llama-server` is installed you can skip to step 2. To run it yourself with llama.cpp (Vulkan build on AMD/Intel GPUs):
 
 ```bash
 llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M \
@@ -62,6 +62,14 @@ cd padou
 ./install.sh            # or: uv tool install .
 ```
 
+This puts a `padou` command in `~/.local/bin`, so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
+
+Working on padou's code yourself? Install it **editable** instead, so your changes take effect without reinstalling:
+
+```bash
+uv tool install --editable .
+```
+
 ### 3. Check and chat
 
 ```bash
@@ -77,6 +85,7 @@ padou -c              continue the most recent session
 padou doctor          check that everything works
 padou --compact       one-line banner
 padou --no-tools      chat without any tools
+padou --no-autostart  don't start llama-server automatically
 padou --url URL       use a different server for this run
 padou --init-config   write an example config
 padou --version
@@ -123,6 +132,18 @@ Approved commands: `disk_usage`, `memory`, `uptime`, `kernel`, `ip_addresses`, `
 > [!IMPORTANT]
 > **The safety rules:** commands are run as argument lists with `shell=False`, so `;`, `&&` and `$(...)` mean nothing. Arguments must match `^[A-Za-z0-9@._:+-]{1,64}$` and can't start with `-`. No `sudo`, ever. Tool output is capped (8000 characters by default) so logs can't flood the context.
 
+## Autostart
+
+When you run `padou` and nothing is listening at the configured address, padou starts `llama-server` itself, using `[server] start_command`, and shows a spinner until the model is loaded. The first start downloads the model (~2.5 GB), so it can take a few minutes; after that it's a few seconds.
+
+- It only happens for servers on **this machine** (`127.0.0.1` / `localhost`).
+- The server **keeps running** after padou exits, so the next launch is instant. Stop it with `pkill -f llama-server`.
+- Its output goes to `~/.local/state/padou/llama-server.log`.
+- Turn it off with `[server] autostart = false`, or `--no-autostart` for one run. The [systemd service](contrib/llama-server.service) is the alternative if you'd rather the server always runs.
+
+> [!NOTE]
+> If you change the port or model in `start_command`, change `[server] url` to match.
+
 ## Configuration
 
 `padou --init-config` writes `~/.config/padou/config.toml`. Every setting is optional:
@@ -133,6 +154,8 @@ url = "http://127.0.0.1:8080"
 model = "qwen3.5-4b"
 model_label = "Qwen3.5 4B"
 timeout = 180
+autostart = true
+start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
 
 [chat]
 temperature = 0.7
@@ -146,6 +169,7 @@ max_output_chars = 8000
 
 [ui]
 banner = "full"        # or "compact"
+clear_on_start = true  # clear the terminal before the banner
 accent = ""            # e.g. "#ff5fa2"; empty = Omarchy theme accent
 ```
 
@@ -157,6 +181,7 @@ See [`config.example.toml`](config.example.toml) for every option.
 |---|---|
 | Config | `~/.config/padou/config.toml` |
 | Saved sessions | `~/.local/share/padou/sessions/` |
+| Autostarted server's log | `~/.local/state/padou/llama-server.log` |
 | Input history | `~/.local/share/padou/history` |
 
 ## Extras
@@ -176,6 +201,8 @@ See [`config.example.toml`](config.example.toml) for every option.
 | `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |
 | The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
 | `padou: command not found` after install | `~/.local/bin` isn't on your PATH. Add it, or run `uv tool update-shell` |
+| `llama-server exited with code 1` on start | Read the log: `tail -50 ~/.local/state/padou/llama-server.log`. Often the port is taken or the model name is wrong |
+| The banner cursor doesn't blink | Your terminal ignores the text-blink attribute (Alacritty does, for example). Nothing to fix in padou; other terminals may show it |
 | Colours look wrong | Set `[ui] accent = "#rrggbb"`, or `NO_COLOR=1 padou` for no colour |
 | `/copy` fails | Install `wl-clipboard` (`sudo pacman -S wl-clipboard`) |
 

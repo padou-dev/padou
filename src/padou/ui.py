@@ -14,11 +14,37 @@ from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
 from rich.text import Text
+from rich.theme import Theme as RichTheme
 
 from padou import __version__
 from padou.theme import Theme
 
 console = Console(highlight=False)
+
+
+def configure(theme: Theme) -> None:
+    """Swap rich's default styles (gray backgrounds) for the padou theme."""
+    console.push_theme(
+        RichTheme(
+            {
+                "markdown.code": f"bold {theme.accent}",  # `inline code`: no background
+                "markdown.code_block": "",
+                "markdown.h1": f"bold {theme.accent}",
+                "markdown.h2": f"bold {theme.accent}",
+                "markdown.h3": "bold",
+                "markdown.link": f"underline {theme.accent}",
+                "markdown.item.bullet": theme.accent,
+                "markdown.block_quote": theme.dim,
+                "markdown.hr": theme.dim,
+                "table.header": "bold",
+            }
+        )
+    )
+
+
+def md(text: str) -> Markdown:
+    # "ansi_dark" uses the terminal's own colours, so code blocks get no gray box
+    return Markdown(text, code_theme="ansi_dark", inline_code_theme="ansi_dark")
 
 
 def short_path(p: Path | str) -> str:
@@ -32,7 +58,7 @@ def short_path(p: Path | str) -> str:
 # --------------------------------------------------------------------- banner
 
 
-def banner(theme: Theme, model_label: str, cwd: Path, cursor: bool = True, compact: bool = False) -> Text:
+def banner(theme: Theme, model_label: str, cwd: Path, cursor: bool = True, compact: bool = False, steady_blink: bool = False) -> Text:
     info1 = Text.assemble((f"padou v{__version__}", "bold"), (" · παντού", theme.dim))
     info2 = Text(f"{model_label} · local · read-only", style=theme.dim)
     info3 = Text(short_path(cwd), style=theme.dim)
@@ -41,9 +67,12 @@ def banner(theme: Theme, model_label: str, cwd: Path, cursor: bool = True, compa
 
     frame = theme.accent
     blink = "▌" if cursor else " "
+    # steady_blink: let the terminal itself blink the cursor forever (SGR 5).
+    # Most terminals honour it; some (e.g. Alacritty) show a solid block instead.
+    cursor_style = f"{theme.accent} blink" if steady_blink else theme.accent
     rows = [
         (Text("  ┌───────┐", style=frame), info1),
-        (Text.assemble(("  │ ", frame), (">_", "bold"), ("  ", ""), (blink, theme.accent), (" │", frame)), info2),
+        (Text.assemble(("  │ ", frame), (">_", "bold"), ("  ", ""), (blink, cursor_style), (" │", frame)), info2),
         (Text("  └──┬─┬──┘", style=frame), info3),
         (Text("   ──┴─┴──", style=frame), Text("")),
     ]
@@ -64,7 +93,7 @@ def show_banner(theme: Theme, model_label: str, cwd: Path, compact: bool, check)
     worker.start()
     if compact or not console.is_terminal:
         worker.join()
-        console.print(banner(theme, model_label, cwd, compact=compact))
+        console.print(banner(theme, model_label, cwd, compact=compact, steady_blink=True))
     else:
         with Live(banner(theme, model_label, cwd), console=console, refresh_per_second=10, transient=False) as live:
             on = True
@@ -73,7 +102,7 @@ def show_banner(theme: Theme, model_label: str, cwd: Path, compact: bool, check)
                 time.sleep(0.35)
                 on = not on
                 live.update(banner(theme, model_label, cwd, cursor=on))
-            live.update(banner(theme, model_label, cwd, cursor=True))
+            live.update(banner(theme, model_label, cwd, cursor=True, steady_blink=True))
     console.print()
     return result[0] if result else (False, "health check failed")
 
@@ -101,18 +130,18 @@ class ReplyView:
         if self._status is not None:
             self._status.stop()
             self._status = None
-            self._live = Live(Markdown(self.text), console=console, refresh_per_second=12, vertical_overflow="visible")
+            self._live = Live(md(self.text), console=console, refresh_per_second=12, vertical_overflow="visible")
             self._live.start()
         now = time.monotonic()
         if self._live and now - self._last > 0.06:
-            self._live.update(Markdown(self.text))
+            self._live.update(md(self.text))
             self._last = now
 
     def __exit__(self, *exc):
         if self._status is not None:
             self._status.stop()
         if self._live is not None:
-            self._live.update(Markdown(self.text))
+            self._live.update(md(self.text))
             self._live.stop()
         return False
 
@@ -159,7 +188,12 @@ def table(theme: Theme, title: str, columns: list[str], rows: list[list], styles
 
 
 def markdown(text: str) -> None:
-    console.print(Markdown(text))
+    console.print(md(text))
+
+
+def clear() -> None:
+    if console.is_terminal:
+        console.clear()
 
 
 def group(*items) -> Group:

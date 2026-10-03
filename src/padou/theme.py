@@ -1,6 +1,7 @@
 """Colours: taken from the active Omarchy theme when there is one.
 
-Omarchy keeps the current theme in ~/.config/omarchy/current/theme/. Different
+Omarchy 4 keeps the current theme in ~/.local/state/omarchy/current/theme/
+(older versions: ~/.config/omarchy/current/theme/). Different
 Omarchy versions and themes ship different files, so we try several and fall
 back to a built-in palette (padou must work on any Linux, not just Omarchy).
 """

@@ -43,7 +43,9 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
         except ServerError as exc:
             checks.append(("Test reply", False, str(exc)))
     else:
-        checks.append(("Start the server", None, "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --port 8080 --no-mmproj"))
+        if cfg.server.autostart:
+            checks.append(("Autostart", None, "on: running `padou` will start llama-server for you"))
+        checks.append(("Start command", None, cfg.server.start_command))
 
     checks.append(("Theme", None, theme.source))
     try:

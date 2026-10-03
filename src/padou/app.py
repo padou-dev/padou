@@ -221,9 +221,17 @@ class App:
         style = Style.from_dict(
             {
                 "prompt": f"bold {self.theme.accent}",
-                "bottom-toolbar": "noreverse",
+                "bottom-toolbar": "noreverse bg:default",
                 "tb": self.theme.dim,
                 "tb.accent": f"{self.theme.accent}",
+                # autocomplete menu: terminal background instead of prompt_toolkit's gray
+                "completion-menu": "bg:default",
+                "completion-menu.completion": "bg:default fg:default",
+                "completion-menu.completion.current": f"bg:default fg:{self.theme.accent} bold reverse",
+                "completion-menu.meta.completion": f"bg:default fg:{self.theme.dim}",
+                "completion-menu.meta.completion.current": f"bg:default fg:{self.theme.accent}",
+                "scrollbar.background": "bg:default",
+                "scrollbar.button": f"bg:{self.theme.dim}",
             }
         )
         prompt = PromptSession(

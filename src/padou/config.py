@@ -30,6 +30,12 @@ class ServerConfig:
     api_key: str = ""
     timeout: float = 180.0
     context_size: int = 8192
+    autostart: bool = True  # start llama-server if nothing answers on localhost
+    start_command: str = (
+        "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja "
+        "--reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
+    )
+    startup_timeout: float = 300.0  # seconds; the first start may download the model
 
 
 @dataclass
@@ -51,6 +57,7 @@ class ToolsConfig:
 @dataclass
 class UIConfig:
     banner: str = "full"  # "full" or "compact"
+    clear_on_start: bool = True
     accent: str = ""  # hex colour override, e.g. "#ff5fa2"; empty = from theme
     show_tool_output: bool = False
 
@@ -122,6 +129,9 @@ model_label = "Qwen3.5 4B"              # shown in the banner and status line
 api_key = ""                            # only if your server needs one
 timeout = 180                           # seconds to wait for a reply
 context_size = 8192                     # fallback when the server doesn't report it
+autostart = true                        # start llama-server if it isn't running (localhost only)
+start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
+startup_timeout = 300                   # first start may download the model (~2.5 GB)
 
 [chat]
 temperature = 0.7
@@ -137,6 +147,7 @@ command_timeout = 15
 
 [ui]
 banner = "full"                         # "full" or "compact"
+clear_on_start = true                   # clear the terminal before the banner
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
 """
