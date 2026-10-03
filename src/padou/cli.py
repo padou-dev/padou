@@ -28,6 +28,43 @@ def parse_args(argv=None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+NOTICE_FILE = paths.DATA_DIR / "notice-accepted"
+
+NOTICE = """padou is free, open-source software provided AS IS, without warranty of any kind.
+
+• AI answers can be wrong, even when they sound confident. Review every
+  command before you run it: you are responsible for what you run.
+• Don't rely on padou for medical, legal, financial or safety decisions.
+• Its tools are designed to be read-only and to skip secret locations,
+  but that is a safeguard, not a guarantee.
+• Models and model servers are third-party software with their own licences.
+
+Full text: DISCLAIMER.md in the project, or https://github.com/padou-dev/padou"""
+
+
+def _accept_notice() -> bool:
+    """Show the disclaimer once; returns False if the user declines."""
+    if NOTICE_FILE.exists():
+        return True
+    th = theme.load()
+    ui.configure(th)
+    from rich.panel import Panel
+    from rich.prompt import Confirm
+
+    ui.console.print(Panel(Text(NOTICE), title="Before you start", border_style=th.accent, padding=(1, 2)))
+    if detect.is_tty():
+        try:
+            ok = Confirm.ask("I understand and accept", default=True, console=ui.console)
+        except (KeyboardInterrupt, EOFError):
+            ok = False
+        if not ok:
+            ui.info(th, "No problem. padou won't start until the notice is accepted.")
+            return False
+    paths.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    NOTICE_FILE.write_text("accepted\n", encoding="utf-8")
+    return True
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
 
@@ -39,6 +76,9 @@ def main(argv=None) -> int:
         except FileExistsError as exc:
             print(f"{exc} already exists; not overwriting.")
             return 1
+
+    if args.command in ("chat", "setup") and not _accept_notice():
+        return 1
 
     if args.command == "setup":
         th = theme.load()

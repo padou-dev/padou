@@ -89,9 +89,23 @@ def is_blocked(path: Path) -> bool:
     return any(pat.match(path.name) for pat in BLOCKED_NAME_PATTERNS)
 
 
-def _check(path: Path) -> None:
+def inside(path: Path, roots: list[Path] | None) -> bool:
+    """Is `path` within one of the allowed folders? roots=None means anywhere."""
+    if roots is None:
+        return True
+    path = path.resolve()  # follow symlinks first, so a link can't lead outside
+    return any(path == r or path.is_relative_to(r) for r in roots)
+
+
+def _check(path: Path, roots: list[Path] | None = None) -> None:
     if is_blocked(path):
         raise ToolError(f"access to {path} is blocked: it may contain secrets")
+    if not inside(path, roots):
+        allowed = ", ".join(str(r) for r in roots or [])
+        raise ToolError(
+            f"{path} is outside the folders padou may read ({allowed}). "
+            f"Tell the user they can allow it with: /folder add {path if path.is_dir() else path.parent}"
+        )
 
 
 def _cap(text: str, limit: int) -> str:
@@ -112,9 +126,9 @@ def _tail(text: str, limit: int) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def read_file(path: str, cwd: Path, limit: int, start_line: int = 1, max_lines: int = 400) -> str:
+def read_file(path: str, cwd: Path, limit: int, start_line: int = 1, max_lines: int = 400, roots: list[Path] | None = None) -> str:
     p = resolve(path, cwd)
-    _check(p)
+    _check(p, roots)
     if not p.exists():
         raise ToolError(f"{p} does not exist")
     if p.is_dir():
@@ -134,9 +148,9 @@ def read_file(path: str, cwd: Path, limit: int, start_line: int = 1, max_lines: 
     return _cap(header + body, limit)
 
 
-def list_dir(path: str, cwd: Path, limit: int) -> str:
+def list_dir(path: str, cwd: Path, limit: int, roots: list[Path] | None = None) -> str:
     p = resolve(path or ".", cwd)
-    _check(p)
+    _check(p, roots)
     if not p.is_dir():
         raise ToolError(f"{p} is not a directory")
     try:
@@ -157,11 +171,11 @@ def list_dir(path: str, cwd: Path, limit: int) -> str:
     return _cap(f"{p} ({len(entries)} entries)\n" + "\n".join(rows) + more, limit)
 
 
-def search(pattern: str, cwd: Path, limit: int, path: str = ".", max_results: int = 80) -> str:
+def search(pattern: str, cwd: Path, limit: int, path: str = ".", max_results: int = 80, roots: list[Path] | None = None) -> str:
     if not isinstance(pattern, str) or not pattern:
         raise ToolError("a search pattern is required")
     root = resolve(path or ".", cwd)
-    _check(root)
+    _check(root, roots)
     try:
         rx = re.compile(pattern, re.IGNORECASE)
     except re.error:
@@ -170,7 +184,7 @@ def search(pattern: str, cwd: Path, limit: int, path: str = ".", max_results: in
     hits: list[str] = []
     scanned = 0
     for f in files:
-        if is_blocked(f):
+        if is_blocked(f) or not inside(f, roots):  # skips symlinks pointing outside
             continue
         scanned += 1
         if scanned > 5000:
@@ -393,7 +407,7 @@ def _short(path_text: str) -> str:
         return str(path_text)
 
 
-def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_timeout: float, commands_enabled: bool = True) -> ToolResult:
+def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_timeout: float, commands_enabled: bool = True, roots: list[Path] | None = None) -> ToolResult:
     if isinstance(raw_args, dict):
         args = raw_args
     else:
@@ -407,18 +421,18 @@ def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_time
     try:
         if name == "read_file":
             path = args.get("path", "")
-            out = read_file(path, cwd, limit, args.get("start_line", 1) or 1, args.get("max_lines", 400) or 400)
+            out = read_file(path, cwd, limit, args.get("start_line", 1) or 1, args.get("max_lines", 400) or 400, roots)
             total = out.split(" lines total", 1)[0].rsplit("(", 1)[-1]
             return ToolResult(True, out, f"Read {_short(path)}", f"{total} lines")
         if name == "list_dir":
             path = args.get("path") or "."
-            out = list_dir(path, cwd, limit)
+            out = list_dir(path, cwd, limit, roots)
             count = out.split(" entries)", 1)[0].rsplit("(", 1)[-1]
             return ToolResult(True, out, f"List {_short(path)}", f"{count} entries")
         if name == "search":
             pattern = args.get("pattern", "")
             path = args.get("path") or "."
-            out = search(pattern, cwd, limit, path)
+            out = search(pattern, cwd, limit, path, roots=roots)
             n = 0 if out.startswith("no matches") else out.count("\n") + 1
             return ToolResult(True, out, f"Search {pattern!r} in {_short(path)}", f"{n} matches")
         if name == "run_command":

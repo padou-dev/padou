@@ -95,3 +95,30 @@ def test_definitions_shape():
     names = [d["function"]["name"] for d in defs]
     assert names == ["read_file", "list_dir", "search", "run_command"]
     assert "run_command" not in [d["function"]["name"] for d in tools.definitions(False)]
+
+
+def test_folder_scope(tmp_path):
+    inside_dir = tmp_path / "project"
+    outside_dir = tmp_path / "elsewhere"
+    inside_dir.mkdir(); outside_dir.mkdir()
+    (inside_dir / "a.txt").write_text("hello padou\n")
+    (outside_dir / "b.txt").write_text("secret-ish padou\n")
+    roots = [inside_dir.resolve()]
+    assert tools.execute("read_file", {"path": "a.txt"}, inside_dir, 1000, 5, roots=roots).ok
+    refused = tools.execute("read_file", {"path": str(outside_dir / "b.txt")}, inside_dir, 1000, 5, roots=roots)
+    assert not refused.ok and "/folder add" in refused.output
+    assert not tools.execute("list_dir", {"path": ".."}, inside_dir, 1000, 5, roots=roots).ok
+    # anywhere mode
+    assert tools.execute("read_file", {"path": str(outside_dir / "b.txt")}, inside_dir, 1000, 5, roots=None).ok
+
+
+def test_symlink_cannot_escape_folder(tmp_path):
+    inside_dir = tmp_path / "project"
+    outside_dir = tmp_path / "elsewhere"
+    inside_dir.mkdir(); outside_dir.mkdir()
+    (outside_dir / "b.txt").write_text("padou outside\n")
+    (inside_dir / "link.txt").symlink_to(outside_dir / "b.txt")
+    roots = [inside_dir.resolve()]
+    assert not tools.execute("read_file", {"path": "link.txt"}, inside_dir, 1000, 5, roots=roots).ok
+    out = tools.search("padou", inside_dir, 10_000, roots=roots)
+    assert "outside" not in out

@@ -9,6 +9,9 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 > [!NOTE]
 > **padou** (παντού, pronounced "padoú") is Greek for "everywhere". This is a learning project, version 0.x. Expect rough edges.
 
+> [!WARNING]
+> padou is provided **as is, without warranty**. AI answers can be wrong: **review every command before you run it**, and don't rely on padou for medical, legal, financial or safety decisions. See [DISCLAIMER.md](DISCLAIMER.md).
+
 ## Features
 
 - **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
@@ -22,9 +25,18 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 
 Small models are fast and private, but they're not Claude or GPT. They're good at explaining commands, reading a config or log and summarising it, and answering everyday questions. They're weaker at long multi-step reasoning and sometimes pick the wrong tool or misread output. padou keeps the toolset small and the output capped to help them.
 
+## Platforms
+
+| Platform | Status |
+|---|---|
+| **Linux** | ✅ Developed and tested on Arch / Omarchy 4 |
+| **Windows (WSL)** | ✅ It's Linux, so it should work like Linux |
+| **macOS** | 🟡 Untested. Chat should work; several approved commands are Linux-only |
+| **Windows (native)** | 🟡 Untested. Chat may work; the system commands, `/copy` and GPU detection are Linux-only |
+
 ## Requirements
 
-- Linux (developed on Arch / Omarchy 4)
+- Linux (developed on Arch / Omarchy 4); see [Platforms](#platforms)
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
 - An OpenAI-compatible model server. For llama.cpp, start it **with `--jinja`**, which tool calling needs.
 
@@ -135,6 +147,7 @@ padou --version
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard (`wl-copy`) |
 | `/tools` | List the tools padou may use |
+| `/folder [add <path>]` | Folders padou may read: list, `add <path> [--always]`, `remove <n>`, `anywhere`, `restrict` |
 | `/resume [n]` | List saved sessions, or continue one |
 | `/compact` | Summarise the conversation to free up context |
 | `/doctor` | Run the checks from inside padou |
@@ -145,6 +158,26 @@ padou --version
 ### Keys
 
 `Enter` send · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Ctrl+C` cancel a reply · `Ctrl+D` quit
+
+## Folder access
+
+By default padou's file tools can only read **the folder you started it in**. Need more? Grant it from inside padou (Tab completes the path):
+
+```
+/folder                      show what padou may read
+/folder add ~/Documents      allow a folder for this session
+/folder add /etc --always    allow it every time (saved to the config)
+/folder remove 2             take access away again
+/folder anywhere             whole system, for sysadmin work (this session only)
+/folder restrict             back to the allowed folders
+```
+
+The model is told which folders it may use, and padou refuses anything outside them, including through symlinks. Secret locations stay blocked even in `anywhere` mode. The approved system commands (`df`, `journalctl`, `systemctl status`…) aren't affected, since they report on the system rather than reading your files.
+
+To change the default, set `[tools] scope = "anywhere"` and/or list folders in `[tools] folders = ["~/Projects", "/etc"]`.
+
+> [!TIP]
+> Starting padou in your home folder (`~`) allows your whole home folder. Start it in a project folder to keep it focused.
 
 ## Tools
 
@@ -262,6 +295,10 @@ uv sync
 uv run padou           # run from the source tree
 uv run pytest          # tests for the tool safety rules, config and theme
 ```
+
+## Disclaimer
+
+padou is free software provided **"as is", without warranty of any kind**. The author(s) are not liable for any damage, data loss or other consequences of using it. AI output can be wrong, so you are responsible for reviewing anything padou suggests and for every command you choose to run. Models and model servers are third-party software with their own licences, and padou isn't affiliated with any of the companies or projects it mentions. Read the full [DISCLAIMER.md](DISCLAIMER.md). On first run, padou shows a short version of this and asks you to accept it.
 
 ## Licence
 

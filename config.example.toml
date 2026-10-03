@@ -1,17 +1,17 @@
 # padou configuration
-# Location: ~/.config/padou/config.toml
+# Location: ~/.config/padou/config.toml   (re-create it any time with: padou setup)
 
 [server]
 # Any OpenAI-compatible server: llama.cpp (llama-server), Ollama, LM Studio...
-url = "http://127.0.0.1:8080"          # Ollama: "http://127.0.0.1:11434"
-model = "qwen3.5-4b"                    # name sent to the server; /models lists real ones
-model_label = "Qwen3.5 4B"              # shown in the banner and status line
-api_key = ""                            # only if your server needs one
+url = "http://127.0.0.1:8080"
+model = "qwen3.5-4b"
+model_label = "Qwen3.5 4B"
+api_key = ""
 timeout = 180                           # seconds to wait for a reply
 context_size = 8192                     # fallback when the server doesn't report it
-autostart = true                        # start llama-server if it isn't running (localhost only)
+autostart = true                        # start the server if nothing answers (localhost only)
 start_command = "llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M -ngl 99 --jinja --reasoning-budget 0 -c 8192 --host 127.0.0.1 --port 8080 --no-mmproj"
-startup_timeout = 300                   # first start may download the model (~2.5 GB)
+startup_timeout = 300                   # the first start may download the model
 
 [chat]
 temperature = 0.7
@@ -24,6 +24,8 @@ enabled = true                          # read-only file tools
 commands = true                         # approved read-only system commands
 max_output_chars = 8000                 # tool output is cut to this size
 command_timeout = 15
+scope = "folders"                       # "folders" = start folder + list below; "anywhere" = whole system
+folders = []                            # always readable, e.g. ["~/Projects", "/etc"]; /folder add --always adds here
 
 [ui]
 banner = "full"                         # "full" or "compact"

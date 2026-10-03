@@ -10,6 +10,8 @@ First release.
 - Slash commands: `/help`, `/clear`, `/models`, `/status`, `/copy`, `/tools`, `/resume`, `/compact`, `/doctor`, `/system`, `/exit`
 - Saved sessions with `/resume` and `padou -c`
 - `/screenshot` saves the screen as an SVG image
+- Folder access: tools read only the start folder by default; `/folder add|remove|anywhere|restrict`, `[tools] scope` and `folders`
+- Disclaimer (DISCLAIMER.md) and a one-time notice on first run
 - `padou setup`: first-run wizard that detects OS, GPU, RAM and model servers, recommends a model and writes the config
 - Starts llama-server (or `ollama serve`) automatically when nothing is running on localhost
 - Works with llama.cpp, Ollama and LM Studio

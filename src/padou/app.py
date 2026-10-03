@@ -10,7 +10,8 @@ from datetime import date
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.completion import Completer, Completion, PathCompleter
+from prompt_toolkit.document import Document
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
@@ -32,8 +33,16 @@ def _os_name() -> str:
 
 
 class SlashCompleter(Completer):
+    def __init__(self):
+        self.paths = PathCompleter(only_directories=True, expanduser=True)
+
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor
+        for prefix in ("/folder add ", "/folder remove ", "/folders add "):
+            if text.startswith(prefix):  # Tab-complete folder paths
+                sub = Document(text[len(prefix):])
+                yield from self.paths.get_completions(sub, complete_event)
+                return
         if not text.startswith("/") or " " in text:
             return
         for name, cmd in commands.COMMANDS.items():
@@ -52,6 +61,14 @@ class App:
         self.ctx_used = 0
         self.last_speed: float | None = None
         self.last_reply = ""
+        # folders the tools may read (None = anywhere); the start folder is always one
+        self.folders: list[Path] | None = None
+        if cfg.tools.scope == "folders":
+            self.folders = [cwd.resolve()]
+            for f in cfg.tools.folders:
+                p = Path(os.path.expanduser(f)).resolve()
+                if p.is_dir() and p not in self.folders:
+                    self.folders.append(p)
         self.session = sessions.new(cfg.server.model, str(cwd))
         self.session.messages = [self.system_message()]
         self._last_interrupt = 0.0
@@ -66,7 +83,19 @@ class App:
         )
         if not self.cfg.tools.enabled:
             context += "\nTools are disabled in this session: answer from knowledge only."
+        elif self.folders is None:
+            context += "\nYour file tools may read anywhere on the system (except secret locations)."
+        else:
+            listed = ", ".join(str(f) for f in self.folders)
+            context += (
+                f"\nYour file tools may ONLY read inside these folders: {listed}. "
+                "If the user asks about files elsewhere, tell them to allow it with /folder add <path>."
+            )
         return {"role": "system", "content": self.cfg.chat.system_prompt + context}
+
+    def refresh_system_prompt(self) -> None:
+        """Tell the model about changes (like allowed folders) without a new session."""
+        self.session.messages[0] = self.system_message()
 
     def new_session(self) -> None:
         self.session.save()
@@ -136,6 +165,7 @@ class App:
                         self.cfg.tools.max_output_chars,
                         self.cfg.tools.command_timeout,
                         self.cfg.tools.commands,
+                        self.folders,
                     )
                     ui.tool_call(self.theme, result.title, result.summary, result.ok, result.output, self.cfg.ui.show_tool_output)
                     messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})

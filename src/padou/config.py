@@ -53,6 +53,8 @@ class ToolsConfig:
     commands: bool = True
     max_output_chars: int = 8000
     command_timeout: float = 15.0
+    scope: str = "folders"  # "folders": only the start folder + `folders`; "anywhere": whole system
+    folders: list = field(default_factory=list)  # always readable, e.g. ["~/Projects", "/etc"]
 
 
 @dataclass
@@ -112,6 +114,12 @@ def load(path: Path | None = None) -> Config:
         _apply(getattr(cfg, name), section, name, cfg.warnings)
     for leftover in data:
         cfg.warnings.append(f"unknown section [{leftover}]")
+    if cfg.tools.scope not in ("folders", "anywhere"):
+        cfg.warnings.append('[tools] scope should be "folders" or "anywhere"')
+        cfg.tools.scope = "folders"
+    if not all(isinstance(f, str) for f in cfg.tools.folders):
+        cfg.warnings.append("[tools] folders should be a list of paths")
+        cfg.tools.folders = [f for f in cfg.tools.folders if isinstance(f, str)]
     if cfg.ui.banner not in ("full", "compact"):
         cfg.warnings.append('[ui] banner should be "full" or "compact"')
         cfg.ui.banner = "full"
@@ -153,6 +161,8 @@ enabled = true                          # read-only file tools
 commands = true                         # approved read-only system commands
 max_output_chars = 8000                 # tool output is cut to this size
 command_timeout = 15
+scope = "folders"                       # "folders" = start folder + list below; "anywhere" = whole system
+folders = []                            # always readable, e.g. ["~/Projects", "/etc"]; /folder add --always adds here
 
 [ui]
 banner = {_q(banner)}                         # "full" or "compact"
@@ -173,4 +183,37 @@ def write_example(path: Path | None = None, overwrite: bool = False, text: str |
     if path.exists():
         path.replace(path.with_suffix(".toml.bak"))  # keep the old one, just in case
     path.write_text(text or EXAMPLE_CONFIG, encoding="utf-8")
+    return path
+
+
+def add_folder_to_file(folder: str, path: Path | None = None) -> Path:
+    """Append a folder to [tools] folders in the config file, keeping its comments."""
+    path = path or paths.CONFIG_FILE
+    if not path.exists():
+        write_example(path)
+    text = path.read_text(encoding="utf-8")
+    data = tomllib.loads(text)
+    current = list(data.get("tools", {}).get("folders", []))
+    if folder in current:
+        return path
+    new_line = "folders = " + json.dumps(current + [folder], ensure_ascii=False)
+    lines = text.splitlines()
+    section = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped
+        elif section == "[tools]" and stripped.startswith("folders") and "=" in stripped:
+            comment = line[line.index("#"):] if "#" in line and "]" in line[: line.index("#")] else ""
+            lines[i] = (new_line + "  " + comment).rstrip() if comment else new_line
+            break
+    else:
+        if "[tools]" in (l.strip() for l in lines):
+            idx = [l.strip() for l in lines].index("[tools]")
+            lines.insert(idx + 1, new_line)
+        else:
+            lines += ["", "[tools]", new_line]
+    out = "\n".join(lines) + "\n"
+    tomllib.loads(out)  # never write a broken file
+    path.write_text(out, encoding="utf-8")
     return path

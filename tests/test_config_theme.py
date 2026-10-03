@@ -45,3 +45,24 @@ def test_theme_from_alacritty(tmp_path):
 def test_accent_override(tmp_path):
     th = theme.load("#123456", theme_dir=tmp_path)
     assert th.accent == "#123456"
+
+
+def test_add_folder_keeps_comments(tmp_path):
+    import tomllib
+    p = config.write_example(tmp_path / "config.toml")
+    config.add_folder_to_file("~/Projects", p)
+    config.add_folder_to_file("/etc", p)
+    config.add_folder_to_file("/etc", p)  # no duplicates
+    text = p.read_text()
+    assert tomllib.loads(text)["tools"]["folders"] == ["~/Projects", "/etc"]
+    assert "# padou configuration" in text and "[ui]" in text
+    cfg = config.load(p)
+    assert cfg.warnings == [] and cfg.tools.folders == ["~/Projects", "/etc"]
+
+
+def test_add_folder_to_old_config_without_line(tmp_path):
+    import tomllib
+    p = tmp_path / "c.toml"
+    p.write_text("[tools]\nenabled = true\n")
+    config.add_folder_to_file("/srv", p)
+    assert tomllib.loads(p.read_text())["tools"]["folders"] == ["/srv"]
