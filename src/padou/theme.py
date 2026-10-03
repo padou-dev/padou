@@ -7,12 +7,17 @@ back to a built-in palette (padou must work on any Linux, not just Omarchy).
 
 from __future__ import annotations
 
+import os
 import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-OMARCHY_THEME = Path.home() / ".config/omarchy/current/theme"
+_STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state")
+OMARCHY_THEME_DIRS = [
+    _STATE / "omarchy/current/theme",  # Omarchy 4
+    Path.home() / ".config/omarchy/current/theme",  # older Omarchy
+]
 HEX = re.compile(r"#?([0-9a-fA-F]{6})\b")
 
 
@@ -93,8 +98,18 @@ def _from_key_value(f: Path, sep: str) -> dict | None:
     }
 
 
-def load(accent_override: str = "", theme_dir: Path = OMARCHY_THEME) -> Theme:
+def _theme_name(theme_dir: Path) -> str:
+    name_file = theme_dir.parent / "theme.name"
+    try:
+        return name_file.read_text(encoding="utf-8").strip() or theme_dir.resolve().name
+    except OSError:
+        return theme_dir.resolve().name
+
+
+def load(accent_override: str = "", theme_dir: Path | None = None) -> Theme:
     theme = Theme()
+    if theme_dir is None:
+        theme_dir = next((d for d in OMARCHY_THEME_DIRS if d.is_dir()), OMARCHY_THEME_DIRS[0])
     if theme_dir.is_dir():
         readers = [
             ("colors.toml", lambda: _from_colors_toml(theme_dir)),
@@ -111,7 +126,7 @@ def load(accent_override: str = "", theme_dir: Path = OMARCHY_THEME) -> Theme:
                 for key, value in found.items():
                     if value:
                         setattr(theme, key, value)
-                theme.source = f"Omarchy theme ({theme_dir.resolve().name}, {label})"
+                theme.source = f"Omarchy theme: {_theme_name(theme_dir)} ({label})"
                 break
     override = _hex(accent_override)
     if override:
