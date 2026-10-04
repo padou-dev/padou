@@ -33,14 +33,23 @@ class ModelChoice:
 
 
 MODELS: list[ModelChoice] = [
+    # Smallest to biggest. All are Q4_K_M quantised and can call padou's tools.
     ModelChoice("lite", "Qwen3.5 2B", "Alibaba (China)", "bartowski/Qwen_Qwen3.5-2B-GGUF:Q4_K_M", "qwen3.5:2b", 1.4,
                 "CPU-only machines and low RAM. Fastest, least capable", 4),
+    ModelChoice("granite", "Granite 4.0 Micro", "IBM (USA)", "bartowski/ibm-granite_granite-4.0-micro-GGUF:Q4_K_M", "granite4:micro", 2.1,
+                "Small and steady, made for tool calling. Apache 2.0", 6),
+    ModelChoice("ministral3b", "Ministral 3 3B", "Mistral AI (France)", "unsloth/Ministral-3-3B-Instruct-2512-GGUF:Q4_K_M", "ministral-3:3b", 2.2,
+                "European option, quick on laptops (Ollama 0.13.1+)", 6),
+    ModelChoice("phi", "Phi-4-mini", "Microsoft (USA)", "bartowski/microsoft_Phi-4-mini-instruct-GGUF:Q4_K_M", "phi4-mini:3.8b", 2.5,
+                "Good at reasoning and maths for its size. MIT licence", 8),
     ModelChoice("standard", "Qwen3.5 4B", "Alibaba (China)", "bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M", "qwen3.5:4b", 3.0,
                 "Integrated GPUs and laptops. The default", 8),
+    ModelChoice("ministral8b", "Ministral 3 8B", "Mistral AI (France)", "unsloth/Ministral-3-8B-Instruct-2512-GGUF:Q4_K_M", "ministral-3:8b", 5.2,
+                "Bigger European option, smarter but slower (Ollama 0.13.1+)", 16),
+    ModelChoice("gemma", "Gemma 4 E4B", "Google (USA)", "bartowski/google_gemma-4-E4B-it-GGUF:Q4_K_M", "gemma4:e4b", 5.4,
+                "Google's 4B class, strong all-rounder (bigger download)", 8),
     ModelChoice("better", "Qwen3.5 9B", "Alibaba (China)", "bartowski/Qwen_Qwen3.5-9B-GGUF:Q4_K_M", "qwen3.5:9b", 6.2,
                 "GPUs with 8 GB+ VRAM. Noticeably smarter", 16),
-    ModelChoice("gemma", "Gemma 4 E4B", "Google (USA)", "bartowski/google_gemma-4-E4B-it-GGUF:Q4_K_M", "gemma4:e4b", 5.4,
-                "Non-Chinese alternative in the 4B class (bigger download)", 8),
 ]
 MODELS_BY_KEY = {m.key: m for m in MODELS}
 

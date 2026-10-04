@@ -28,11 +28,11 @@ padou's read tools are designed to be read-only: they run no shell, never use `s
 
 ## Third-party software and models
 
-padou does not include any AI model. Models (for example Qwen by Alibaba, or Gemma by Google) and model servers (llama.cpp, Ollama, LM Studio) are **third-party** software, downloaded by those tools from their own sources and governed by **their own licences and terms**. Check the licence on each model's page before use, especially for commercial use. The author of padou is not responsible for third-party software, models or the content they produce.
+padou does not include any AI model. Models (for example Qwen by Alibaba, Gemma by Google, Phi by Microsoft, Granite by IBM or Ministral by Mistral AI) and model servers (llama.cpp, Ollama, LM Studio) are **third-party** software, downloaded by those tools from their own sources and governed by **their own licences and terms**. Check the licence on each model's page before use, especially for commercial use. The author of padou is not responsible for third-party software, models or the content they produce.
 
 ## No affiliation
 
-padou is an independent project. It is not affiliated with, endorsed by or sponsored by Alibaba (Qwen), Google (Gemma), the llama.cpp project, Ollama, LM Studio, Omarchy, Anthropic or any other company or project named in its documentation. All trademarks belong to their respective owners.
+padou is an independent project. It is not affiliated with, endorsed by or sponsored by Alibaba (Qwen), Google (Gemma), Microsoft (Phi), IBM (Granite), Mistral AI (Ministral), the llama.cpp project, Ollama, LM Studio, Omarchy, Anthropic or any other company or project named in its documentation. All trademarks belong to their respective owners.
 
 ## Privacy
 

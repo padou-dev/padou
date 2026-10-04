@@ -57,3 +57,13 @@ def test_every_model_renders_a_valid_config():
         cmd, _ = detect.build_start_command(m, LlamaInfo(), True)
         text = config.render(config.ServerConfig(model=m.hf, model_label=m.label, start_command=cmd))
         assert tomllib.loads(text)["server"]["start_command"] == cmd
+
+
+def test_model_catalogue_is_sorted_and_from_several_makers():
+    sizes = [m.size_gb for m in detect.MODELS]
+    assert sizes == sorted(sizes)
+    assert len(detect.MODELS_BY_KEY) == len(detect.MODELS)  # keys are unique
+    assert len({m.maker for m in detect.MODELS}) >= 5
+    assert {"lite", "standard", "better"} <= set(detect.MODELS_BY_KEY)  # recommend() uses these
+    for m in detect.MODELS:
+        assert m.hf.endswith(":Q4_K_M") and ":" in m.ollama

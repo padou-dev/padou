@@ -46,25 +46,133 @@ def cmd_clear(app: "App", arg: str):
     ui.success(app.theme, "Started a fresh conversation (the previous one is saved, see /resume).")
 
 
-def cmd_models(app: "App", arg: str):
+def _show_models(app: "App", items, k: str) -> None:
+    th = app.theme
+    rows = []
+    for i, e in enumerate(items, 1):
+        size = f"{e.size_gb:g} GB" if e.size_gb else ""
+        maker = e.choice.maker if e.choice else ""
+        have = "✓" if e.downloaded else ""
+        rows.append([str(i), ("● " if e.current else "  ") + e.label, maker, size, have, e.note])
+    title = {"llama.cpp": "Models (llama.cpp)", "ollama": "Models (Ollama)"}.get(k, "Models on the server")
+    ui.table(th, title, ["#", "Model", "Made by", "Size", "Have it", "Good for"], rows,
+             styles=[th.dim, "bold", th.dim, th.dim, th.ok, ""])
+    if k == "llama.cpp":
+        ui.info(th, "● in use · ✓ downloaded. Switch with /models <number>; a new model downloads once, then starts.")
+    elif k == "ollama":
+        ui.info(th, "● in use · ✓ pulled. Switch with /models <number>; padou offers to pull it if needed.")
+    else:
+        ui.info(th, "Switch with /models <number or name>. This server is managed outside padou.")
+
+
+def _save_model(app: "App", values: dict) -> None:
+    from padou import config
+
     try:
-        models = app.client.list_models()
+        config.update_section("server", values, app.cfg.source)
+    except (OSError, ValueError) as exc:
+        ui.error(app.theme, f"Switched for this session, but couldn't save it to the config: {exc}")
+
+
+def _switch_llama(app: "App", entry) -> None:
+    from padou import models, server
+
+    th, cfg = app.theme, app.cfg.server
+    if entry.current:
+        ui.info(th, f"Already using {entry.label}.")
+        return
+    if not entry.downloaded:
+        size = f" ({entry.size_gb:g} GB)" if entry.size_gb else ""
+        ui.info(th, f"{entry.label} isn't downloaded yet{size}. llama-server will download it once, from Hugging Face.")
+        if not ui.confirm(f"Download and switch to {entry.label}?", default=False):
+            ui.info(th, "Kept the current model.")
+            return
+    old = (cfg.start_command, cfg.model, cfg.model_label)
+    cfg.start_command = models.with_model(cfg.start_command, entry.ident)
+    cfg.model, cfg.model_label = entry.ident, entry.label
+    procs = server.find(cfg)
+    if procs:
+        server.stop(procs)
+    proc, problem = server.start(cfg)
+    if proc is None:
+        cfg.start_command, cfg.model, cfg.model_label = old
+        ui.error(th, problem)
+        return
+    timeout = cfg.startup_timeout if entry.downloaded else max(cfg.startup_timeout, 3600)
+    status = f"loading {entry.label}…" if entry.downloaded else f"downloading {entry.label} (see /server log)…"
+    try:
+        with ui.ReplyView(th, status):
+            up, detail = server.wait_ready(app.client, proc, timeout)
+    except KeyboardInterrupt:
+        up, detail = False, "waiting"
+    _save_model(app, {"model": cfg.model, "model_label": cfg.model_label, "start_command": cfg.start_command})
+    app.client.model, app.model_label, app.started_pid = cfg.model, cfg.model_label, proc.pid
+    if up:
+        n_ctx = app.client.context_size()
+        if n_ctx:
+            app.ctx_size = n_ctx
+        ui.success(th, f"Now using {entry.label}. Saved as your default.")
+    elif detail == "waiting":
+        ui.info(th, f"Stopped waiting; {entry.label} keeps loading in the background. Saved as your default.")
+    else:
+        ui.error(th, f"{detail}  (Saved as your default anyway; pick another with /models.)")
+
+
+def _switch_ollama(app: "App", entry) -> None:
+    th, cfg = app.theme, app.cfg.server
+    if entry.current:
+        ui.info(th, f"Already using {entry.label}.")
+        return
+    if not entry.downloaded:
+        exe = shutil.which("ollama")
+        if not exe:
+            ui.error(th, f"{entry.ident} isn't pulled, and the ollama command wasn't found. Run: ollama pull {entry.ident}")
+            return
+        size = f" ({entry.size_gb:g} GB)" if entry.size_gb else ""
+        if not ui.confirm(f"Pull {entry.ident}{size} with Ollama now?", default=False):
+            ui.info(th, "Kept the current model.")
+            return
+        try:
+            code = subprocess.run([exe, "pull", entry.ident]).returncode
+        except KeyboardInterrupt:
+            ui.info(th, "Pull cancelled. Kept the current model.")
+            return
+        if code != 0:
+            ui.error(th, f"ollama pull failed (exit {code}). Is your Ollama new enough for this model?")
+            return
+    cfg.model, cfg.model_label = entry.ident, entry.label
+    app.client.model, app.model_label = entry.ident, entry.label
+    _save_model(app, {"model": cfg.model, "model_label": cfg.model_label})
+    ui.success(th, f"Now using {entry.label}. Saved as your default.")
+
+
+def cmd_models(app: "App", arg: str):
+    from padou import models
+
+    cfg = app.cfg.server
+    k = models.kind(cfg)
+    try:
+        running = models.ollama_installed(cfg) if k == "ollama" else app.client.list_models()
     except ServerError as exc:
-        ui.error(app.theme, str(exc))
+        if k == "other":
+            ui.error(app.theme, str(exc))
+            return
+        running = []  # llama.cpp: the server may be down, and switching starts it anyway
+    items = models.entries(cfg, running)
+    if not arg.strip():
+        _show_models(app, items, k)
         return
-    if arg:
-        choice = arg.strip()
-        if choice.isdigit() and 1 <= int(choice) <= len(models):
-            choice = models[int(choice) - 1]
-        app.client.model = choice
-        app.model_label = choice
-        ui.success(app.theme, f"Now using model: {choice}")
-        if len(models) == 1 and choice != models[0]:
-            ui.info(app.theme, "Note: this server offers only one model; llama-server answers with whatever it has loaded.")
+    entry = models.pick(items, arg)
+    if entry is None:
+        ui.error(app.theme, f"No model '{arg.strip()}'. Type /models to see the list.")
         return
-    rows = [[str(i), m, "●" if m == app.client.model else ""] for i, m in enumerate(models, 1)]
-    ui.table(app.theme, "Models on the server", ["#", "Model", "In use"], rows, styles=[app.theme.dim, "", app.theme.accent])
-    ui.info(app.theme, "Switch with /models <number or name>. llama-server serves one model at a time; Ollama can switch freely.")
+    if k == "llama.cpp":
+        _switch_llama(app, entry)
+    elif k == "ollama":
+        _switch_ollama(app, entry)
+    else:
+        app.client.model = app.model_label = entry.ident
+        ui.success(app.theme, f"Now using model: {entry.ident} (this session only)")
 
 
 def cmd_status(app: "App", arg: str):
@@ -385,7 +493,7 @@ def cmd_system(app: "App", arg: str):
 COMMANDS: dict[str, Command] = {
     "help": Command(cmd_help, "Show commands and keys"),
     "clear": Command(cmd_clear, "Start a fresh conversation"),
-    "models": Command(cmd_models, "List models on the server, or switch", "[n|name]"),
+    "models": Command(cmd_models, "List models, or switch to one (downloads it if needed)", "[n|name]"),
     "status": Command(cmd_status, "Model, server, context use and speed"),
     "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),
     "tools": Command(cmd_tools, "List the tools padou may use"),

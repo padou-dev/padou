@@ -16,6 +16,8 @@ First release.
 - Windows (WSL) install guide; `/copy` uses `clip.exe` under WSL
 - Write mode: `/write <folder>`, `edit_file`/`write_file` with a diff and approval for every change, backups, `/undo`, `/changes`
 - `/server` status, stop, restart and log; `[server] stop_on_exit`
+- `/models` switches models in one step: restarts llama-server with the new one (downloading it once if needed) or pulls it with Ollama, and saves it as your default
+- Eight models to choose from, by Alibaba (Qwen3.5 2B/4B/9B), IBM (Granite 4.0 Micro), Mistral AI (Ministral 3 3B/8B), Microsoft (Phi-4-mini) and Google (Gemma 4 E4B)
 - `padou setup`: first-run wizard that detects OS, GPU, RAM and model servers, recommends a model and writes the config
 - Starts llama-server (or `ollama serve`) automatically when nothing is running on localhost
 - Works with llama.cpp, Ollama and LM Studio

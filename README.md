@@ -69,12 +69,18 @@ For llama.cpp, pick the build for your GPU: **Vulkan** for AMD or Intel, **CUDA*
 
 | # | Model | Made by | Download | Good for |
 |---|---|---|---|---|
-| 1 | Qwen3.5 2B | Alibaba | 1.4 GB | CPU-only machines and low RAM. Fastest, least capable |
-| 2 | **Qwen3.5 4B** (default) | Alibaba | 3.0 GB | Integrated GPUs and laptops |
-| 3 | Qwen3.5 9B | Alibaba | 6.2 GB | GPUs with 8 GB+ VRAM. Noticeably smarter |
-| 4 | Gemma 4 E4B | Google | 5.4 GB | A non-Chinese alternative in the 4B class |
+| 1 | Qwen3.5 2B | Alibaba (China) | 1.4 GB | CPU-only machines and low RAM. Fastest, least capable |
+| 2 | Granite 4.0 Micro | IBM (USA) | 2.1 GB | Small and steady, made for tool calling |
+| 3 | Ministral 3 3B | Mistral AI (France) | 2.2 GB | European option, quick on laptops |
+| 4 | Phi-4-mini | Microsoft (USA) | 2.5 GB | Good at reasoning and maths for its size |
+| 5 | **Qwen3.5 4B** (default) | Alibaba (China) | 3.0 GB | Integrated GPUs and laptops |
+| 6 | Ministral 3 8B | Mistral AI (France) | 5.2 GB | Bigger European option, smarter but slower |
+| 7 | Gemma 4 E4B | Google (USA) | 5.4 GB | Google's 4B class, strong all-rounder |
+| 8 | Qwen3.5 9B | Alibaba (China) | 6.2 GB | GPUs with 8 GB+ VRAM. Noticeably smarter |
 
-With llama.cpp the model downloads automatically the first time the server starts (the `-hf` flag). With Ollama: `ollama pull qwen3.5:4b` (or `qwen3.5:2b`, `qwen3.5:9b`, `gemma4:e4b`).
+You can switch any time inside padou with `/models` (see [Switching models](#switching-models)). With llama.cpp a model downloads automatically the first time it's used (the `-hf` flag). With Ollama, pull it first: `ollama pull <tag>` with `qwen3.5:2b`, `granite4:micro`, `ministral-3:3b`, `phi4-mini:3.8b`, `qwen3.5:4b`, `ministral-3:8b`, `gemma4:e4b` or `qwen3.5:9b` (Ministral 3 needs Ollama 0.13.1 or newer).
+
+Each model has its own licence (Apache 2.0 for Qwen, Granite and Ministral; MIT for Phi; the Gemma terms for Gemma). Check the model's page before commercial use.
 
 > [!NOTE]
 > Gemma 4 **E4B** means 4B *effective* parameters: it runs at about 4B speed, but its extra embedding tables make the download bigger than Qwen3.5 4B's.
@@ -149,7 +155,7 @@ padou --version
 |---|---|
 | `/help` | Show commands and keys |
 | `/clear` | Start a fresh conversation (the old one is saved) |
-| `/models [n\|name]` | List models on the server, or switch |
+| `/models [n\|name]` | List models, or switch to one (downloads it if needed) |
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard (`wl-copy`) |
 | `/tools` | List the tools padou may use |
@@ -212,6 +218,16 @@ How it stays safe:
 
 > [!WARNING]
 > Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now edit ~/.bashrc*). **Read every diff before you say yes**, and keep your work in Git so you can always go back.
+
+## Switching models
+
+Type `/models` to see every model padou knows, with **●** on the one in use and **✓** on the ones already downloaded. Then type `/models 4` (or `/models phi`) to switch:
+
+- **llama.cpp:** padou saves the new model in your config, restarts llama-server with it and waits while it loads. A model you haven't used before downloads once first (padou asks before downloading). Old downloads stay in `~/.cache/huggingface`, so switching back is quick.
+- **Ollama:** padou offers to run `ollama pull` if the model isn't there yet, then switches straight away.
+- **Other servers** (LM Studio, remote ones): padou lists what the server offers and switches for this session.
+
+Your choice is saved, so padou starts with it next time. A model you set yourself in `start_command` shows at the top of the list.
 
 ## The model server
 

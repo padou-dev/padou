@@ -221,3 +221,49 @@ def add_folder_to_file(folder: str, path: Path | None = None) -> Path:
     tomllib.loads(out)  # never write a broken file
     path.write_text(out, encoding="utf-8")
     return path
+
+
+def _toml_value(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return f"{value:g}" if isinstance(value, float) else str(value)
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+def update_section(section: str, values: dict, path: Path | None = None) -> Path:
+    """Set keys in one [section] of the config file, keeping everything else (comments too)."""
+    path = path or paths.CONFIG_FILE
+    if not path.exists():
+        write_example(path)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    header = f"[{section}]"
+    todo = dict(values)
+    current = None
+    insert_at = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            current = stripped
+            if current == header:
+                insert_at = i + 1
+            continue
+        if current == header and "=" in stripped and not stripped.startswith("#"):
+            key = stripped.split("=", 1)[0].strip()
+            if key in todo:
+                comment = ""
+                rest = line.split("=", 1)[1]
+                if "  #" in rest:
+                    comment = "  #" + rest.split("  #", 1)[1]
+                lines[i] = f"{key} = {_toml_value(todo.pop(key))}{comment}"
+            insert_at = i + 1
+    if todo:
+        new = [f"{k} = {_toml_value(v)}" for k, v in todo.items()]
+        if insert_at is None:
+            lines += ["", header] + new
+        else:
+            lines[insert_at:insert_at] = new
+    out = "\n".join(lines) + "\n"
+    tomllib.loads(out)  # never write a broken file
+    path.write_text(out, encoding="utf-8")
+    return path
