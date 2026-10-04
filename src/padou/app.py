@@ -46,7 +46,7 @@ class SlashCompleter(Completer):
         if not text.startswith("/") or " " in text:
             return
         for name, cmd in commands.COMMANDS.items():
-            if name.startswith(text[1:].lower()):
+            if name not in commands.ALIASES and name.startswith(text[1:].lower()):
                 yield Completion("/" + name, start_position=-len(text), display_meta=cmd.help)
 
 

@@ -510,10 +510,9 @@ COMMANDS: dict[str, Command] = {
     "exit": Command(cmd_exit, "Quit padou (also Ctrl+D)"),
     # aliases
     "quit": Command(cmd_exit, "Quit padou"),
-    "model": Command(cmd_models, "Alias of /models", "[n|name]"),
     "folders": Command(cmd_folder, "Alias of /folder"),
 }
-ALIASES = {"quit", "model", "folders"}
+ALIASES = {"quit", "folders"}  # still work when typed, but hidden from /help and Tab
 
 
 def dispatch(app: "App", line: str) -> str | None:
