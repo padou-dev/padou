@@ -412,6 +412,10 @@ class App:
                 except KeyboardInterrupt:  # Ctrl+C stops a slow command, not padou
                     ui.info(self.theme, "(cancelled)")
                 continue
+            hint = shell_command_hint(line)
+            if hint:
+                ui.info(self.theme, hint)
+                continue
             ui.console.print()
             self.ask(line)
         self.session.save()
@@ -426,3 +430,16 @@ class App:
             ui.info(self.theme, "The update continues in a new window.")
         ui.info(self.theme, "Goodbye!")
         return 0
+
+
+def shell_command_hint(line: str) -> str:
+    """'padou doctor' typed inside padou: point to the slash command instead of asking the model."""
+    words = line.split()
+    if len(words) != 2 or words[0].lower() != "padou":
+        return ""
+    sub = words[1].lower()
+    if sub == "doctor":
+        return "That's a terminal command. Inside padou, type /doctor."
+    if sub in ("setup", "chat", "--version", "-v", "--help", "-h"):
+        return f"`padou {sub}` runs in the terminal. Type /exit first, then run it there."
+    return ""

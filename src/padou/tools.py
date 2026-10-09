@@ -365,7 +365,7 @@ def _windows_commands() -> list[ApprovedCommand]:
         ApprovedCommand("memory", "Total and free RAM",
                         _ps("Get-CimInstance Win32_OperatingSystem | Select-Object @{n='TotalGB';e={[math]::Round($_.TotalVisibleMemorySize/1MB,1)}},@{n='FreeGB';e={[math]::Round($_.FreePhysicalMemory/1MB,1)}} | Format-List")),
         ApprovedCommand("uptime", "When Windows last started",
-                        _ps("$b=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime; 'Booted: ' + $b + '  (up ' + ((Get-Date)-$b).ToString('d\\.hh\\:mm') + ')'")),
+                        _ps("$b=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime; $u=(Get-Date)-$b; 'Booted: ' + $b.ToString('yyyy-MM-dd HH:mm') + '  (up ' + $u.Days + ' days, ' + $u.Hours + ' hours, ' + $u.Minutes + ' minutes)'")),
         ApprovedCommand("os_version", "Windows edition, version and build",
                         _ps("Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,OSArchitecture | Format-List")),
         ApprovedCommand("hardware", "Computer model, CPU and graphics",
@@ -572,6 +572,9 @@ def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_time
             argument = args.get("argument") or None
             out = run_command(cmd_name, argument, cwd, limit, command_timeout)
             shown = out.splitlines()[0].removeprefix("$ ").split("  (exit", 1)[0]
+            approved = next((c for c in _approved() if c.name == cmd_name), None)
+            if approved and approved.argv[0] == "powershell":
+                shown = f"{cmd_name} · {approved.description}"  # the PowerShell one-liner is too long to show (see /tools)
             body_lines = max(0, out.count("\n"))
             return ToolResult(True, out, f"Run {shown}", f"{body_lines} lines")
         raise ToolError(f"unknown tool {name!r}")

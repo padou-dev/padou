@@ -1,0 +1,25 @@
+from pathlib import Path
+
+from padou import app, compat, tools
+
+
+def test_padou_subcommands_typed_inside_padou_get_a_hint():
+    assert "/doctor" in app.shell_command_hint("padou doctor")
+    assert "/exit" in app.shell_command_hint("Padou setup")
+    assert app.shell_command_hint("padou is great") == ""
+    assert app.shell_command_hint("how do I run padou doctor?") == ""
+
+
+def test_powershell_commands_get_a_short_title(monkeypatch):
+    monkeypatch.setattr(compat, "WINDOWS", True)
+    monkeypatch.setattr(compat, "MACOS", False)
+    argv = next(c.argv for c in tools._windows_commands() if c.name == "uptime")
+    monkeypatch.setattr(tools, "run_command", lambda *a, **k: "$ " + compat.join_command(list(argv)) + "\nBooted: 2026-10-09 17:55  (up 0 days, 2 hours, 3 minutes)")
+    result = tools.execute("run_command", {"name": "uptime"}, Path.cwd(), 10000, 10)
+    assert result.title == "Run uptime · When Windows last started"
+
+
+def test_short_commands_keep_their_real_title(monkeypatch):
+    monkeypatch.setattr(compat, "WINDOWS", True)
+    monkeypatch.setattr(tools, "run_command", lambda *a, **k: "$ ipconfig\nWindows IP Configuration")
+    assert tools.execute("run_command", {"name": "ip_addresses"}, Path.cwd(), 10000, 10).title == "Run ipconfig"
