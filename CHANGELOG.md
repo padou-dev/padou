@@ -6,6 +6,7 @@ First release.
 
 - Runs on Linux, macOS and Windows (native, PowerShell installer `install.ps1`), tested on all three by GitHub Actions
 - Write mode can also rewrite whole files, create folders, move/rename, and delete to the system Trash; every change in a confirmation box, folders need their name typed, `/undo` for all of them
+- A progress bar while the model downloads on the first start (and up to an hour to finish, instead of 5 minutes)
 - Update check once a day in the background, and `/update` to install (`[updates] check = false` turns the check off)
 - The compass star: a launch animation (dots gather from everywhere, παντού decodes to padou), rays that keep pulsing, and a pulsing star in the status line
 - Terminal chat with streaming Markdown and a status line

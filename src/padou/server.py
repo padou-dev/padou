@@ -8,6 +8,7 @@ Windows: processes are found and stopped through psutil.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import time
@@ -64,7 +65,9 @@ def start(cfg: ServerConfig) -> tuple[subprocess.Popen | None, str]:
     return proc, ""
 
 
-def wait_ready(client: Client, proc: subprocess.Popen, timeout: float) -> tuple[bool, str]:
+def wait_ready(client: Client, proc: subprocess.Popen, timeout: float, on_progress=None) -> tuple[bool, str]:
+    """Wait until the server answers. on_progress(text) gets the server's latest
+    log line every second, so a long first download doesn't look stuck."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         code = proc.poll()
@@ -73,8 +76,59 @@ def wait_ready(client: Client, proc: subprocess.Popen, timeout: float) -> tuple[
         up, detail = client.health()
         if up:
             return True, "ok"
+        if on_progress is not None:
+            line = progress()
+            if line:
+                on_progress(line)
         time.sleep(1.0)
     return False, f"the server didn't become ready within {timeout:.0f}s; see {paths.SERVER_LOG}"
+
+
+def progress(width: int = 72) -> str:
+    """The server's latest log line from this start (download progress, loading...), shortened.
+
+    Download progress is redrawn on one line with carriage returns, so both
+    "\r" and "\n" count as line breaks.
+    """
+    try:
+        with open(paths.SERVER_LOG, "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - 8192))
+            tail = f.read().decode("utf-8", errors="replace")
+    except OSError:
+        return ""
+    tail = tail.rsplit("===== padou started", 1)[-1]
+    lines = [" ".join(x.split()) for x in tail.replace("\r", "\n").split("\n")]
+    lines = [x for x in lines[1:] if x]  # [0] is the rest of the "started" marker
+    if not lines:
+        return ""
+    last = lines[-1]
+    bar = progress_bar(last)
+    if bar:
+        return bar
+    return last if len(last) <= width else last[: width - 1] + "…"
+
+
+_PERCENT = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
+_SIZES = re.compile(r"(\d+(?:\.\d+)?\s*[KMGT]i?B)\s*/\s*(\d+(?:\.\d+)?\s*[KMGT]i?B)", re.IGNORECASE)
+
+
+def progress_bar(line: str, cells: int = 24) -> str:
+    """'[=====>   ] 45% 2.8 GB / 6.2 GB' -> 'downloading ━━━━━━━━━━━──────────── 45%  2.8 GB / 6.2 GB'.
+
+    llama.cpp's own progress output differs between versions, so only the
+    percentage (and the sizes, if shown) are taken from it. "" if there's none.
+    """
+    m = _PERCENT.search(line)
+    if not m:
+        return ""
+    pct = min(100.0, float(m.group(1)))
+    filled = round(cells * pct / 100)
+    text = f"downloading {'━' * filled}{'─' * (cells - filled)} {pct:3.0f}%"
+    sizes = _SIZES.search(line)
+    if sizes:
+        text += f"  {' '.join(sizes.group(1).split())} / {' '.join(sizes.group(2).split())}"
+    return text
 
 
 def tail_log(lines: int = 8) -> str:

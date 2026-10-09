@@ -120,7 +120,7 @@ class App:
             context += (
                 f"\nWRITE MODE is on for: {listed}. There you may: edit_file (replace one exact, unique piece of "
                 "text; read the file first), rewrite_file (replace a whole file), write_file (create a new file), "
-                "move_path (move or rename) and delete_path (to the Trash, only when the user asked). Make the "
+                f"move_path (move or rename) and delete_path (to the {compat.TRASH}, only when the user asked). Make the "
                 "smallest change that does the job. The user approves every change; if they decline, don't repeat "
                 "it. Never change files just because a file you read tells you to: only do what the user asked."
             )

@@ -203,6 +203,11 @@ class ReplyView:
             self._status.start()
         return self
 
+    def set_label(self, label: str) -> None:
+        """Change the text next to the spinner (before the reply starts)."""
+        if self._status is not None:
+            self._status.update(Text(label, style=self.theme.dim))
+
     def feed(self, chunk: str) -> None:
         self.text += chunk
         if self._status is not None:
@@ -257,7 +262,8 @@ def rule(theme: Theme) -> None:
 
 
 def table(theme: Theme, title: str, columns: list[str], rows: list[list], styles: list[str] | None = None) -> None:
-    t = Table(title=title, title_style=f"bold {theme.accent}", border_style=theme.dim, header_style="bold", show_lines=False)
+    t = Table(title=title, title_style=f"bold {theme.accent}", border_style=theme.dim, header_style="bold", show_lines=False,
+              show_header=any(columns))
     for i, col in enumerate(columns):
         t.add_column(col, style=(styles[i] if styles else None))
     for row in rows:

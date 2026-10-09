@@ -12,7 +12,7 @@ import subprocess
 from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
-from padou import config, detect, paths, server, ui
+from padou import config, detect, models, paths, server, ui
 from padou.client import Client
 from padou.config import ServerConfig
 from padou.theme import Theme
@@ -72,8 +72,10 @@ def _start_now(theme: Theme, srv: ServerConfig, model: detect.ModelChoice | None
             ui.error(theme, problem)
             return
         try:
-            with ui.ReplyView(theme, "starting the model server… (a first download can take a few minutes)"):
-                up, detail = server.wait_ready(client, proc, srv.startup_timeout)
+            label = "starting the model server… (a first download can take a few minutes; Ctrl+C to stop waiting)"
+            with ui.ReplyView(theme, label) as view:
+                up, detail = server.wait_ready(client, proc, models.ready_timeout(srv),
+                                               on_progress=lambda line: view.set_label(f"starting the model server… {line}"))
         except KeyboardInterrupt:
             ui.info(theme, "(stopped waiting; the server keeps loading in the background)")
             return

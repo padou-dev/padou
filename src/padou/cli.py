@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from padou import __version__, brand, compat, config, detect, doctor, paths, server, sessions, theme, ui, updates
+from padou import __version__, brand, compat, config, detect, doctor, models, paths, server, sessions, theme, ui, updates
 from padou import setup as setup_wizard
 from padou.app import App
 from padou.client import Client
@@ -36,8 +36,8 @@ NOTICE = """padou is free, open-source software provided AS IS, without warranty
   command before you run it: you are responsible for what you run.
 • Don't rely on padou for medical, legal, financial or safety decisions.
 • padou is read-only unless you turn on write mode (/write). There it
-  can edit, move and delete files (to the Trash), only with your
-  approval, and each change you approve is your responsibility.
+  can edit, move and delete files (to the Trash or Recycle Bin), only
+  with your approval, and each change you approve is your responsibility.
 • Its safety limits are safeguards, not guarantees.
 • Models and model servers are third-party software with their own licences.
 
@@ -135,7 +135,10 @@ def main(argv=None) -> int:
                 if proc is None:
                     notes.append(("error", f"Couldn't start the model server: {problem}"))
                     return False, problem
-                up, detail = server.wait_ready(client, proc, cfg.server.startup_timeout)
+                def show(line):
+                    status["text"] = f"starting the model server… {line}"
+
+                up, detail = server.wait_ready(client, proc, models.ready_timeout(cfg.server), on_progress=show)
                 if up:
                     app.started_pid = proc.pid
                     keep = "it stops when you quit" if cfg.server.stop_on_exit else "it keeps running after padou exits"

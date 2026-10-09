@@ -101,8 +101,8 @@ def _switch_llama(app: "App", entry) -> None:
     timeout = cfg.startup_timeout if entry.downloaded else max(cfg.startup_timeout, 3600)
     status = f"loading {entry.label}…" if entry.downloaded else f"downloading {entry.label} (see /server log)…"
     try:
-        with ui.ReplyView(th, status):
-            up, detail = server.wait_ready(app.client, proc, timeout)
+        with ui.ReplyView(th, status) as view:
+            up, detail = server.wait_ready(app.client, proc, timeout, on_progress=lambda line: view.set_label(f"{status} {line}"))
     except KeyboardInterrupt:
         up, detail = False, "waiting"
     _save_model(app, {"model": cfg.model, "model_label": cfg.model_label, "start_command": cfg.start_command})
@@ -228,7 +228,7 @@ def cmd_tools(app: "App", arg: str):
             ["rewrite_file", "Replace a whole file (you see the full diff)"],
             ["write_file", "Create a new file, and any missing folders"],
             ["move_path", "Move or rename a file or folder (never overwrites)"],
-            ["delete_path", "Move a file or folder to the Trash (folders: you type the name)"],
+            ["delete_path", f"Move a file or folder to the {compat.TRASH} (folders: you type the name)"],
         ]
         ui.table(app.theme, "Write tools (write mode is on; you approve every change)", ["Tool", "What it does"], write_rows,
                  styles=[app.theme.warn, ""])
@@ -394,7 +394,7 @@ def cmd_write(app: "App", arg: str):
     app.refresh_system_prompt()
     ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Write mode on for ", "bold"), (ui.short_path(folder), f"bold {th.warn}"),
                                    (" (and its subfolders), this session only.", "")))
-    ui.info(th, "padou can edit, create, move and delete (to the Trash) files there. It can't run anything.")
+    ui.info(th, f"padou can edit, create, move and delete (to the {compat.TRASH}) files there. It can't run anything.")
     ui.info(th, "Every change is shown in a box first and needs your yes (deleting a folder: you type its name).")
     ui.info(th, "Backups are kept: /undo, /changes. Stop with /write off.")
 
@@ -478,8 +478,9 @@ def cmd_server(app: "App", arg: str):
             ui.error(th, problem)
             return
         try:
-            with ui.ReplyView(th, "starting the model server…"):
-                up, detail = server.wait_ready(app.client, proc, cfg.startup_timeout)
+            with ui.ReplyView(th, "starting the model server…") as view:
+                up, detail = server.wait_ready(app.client, proc, cfg.startup_timeout,
+                                               on_progress=lambda line: view.set_label(f"starting the model server… {line}"))
         except KeyboardInterrupt:
             ui.info(th, "(stopped waiting; it keeps loading in the background)")
             return

@@ -80,6 +80,14 @@ def with_model(start_command: str, hf: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
+def ready_timeout(cfg: ServerConfig) -> float:
+    """How long to wait for the server: up to an hour if the model still has to be downloaded."""
+    hf = current_hf(cfg)
+    if hf and not is_downloaded(hf):
+        return max(cfg.startup_timeout, 3600.0)
+    return cfg.startup_timeout
+
+
 def _llama_cache() -> Path:
     """llama.cpp's own download folder, the same way llama.cpp works it out."""
     if os.environ.get("LLAMA_CACHE"):

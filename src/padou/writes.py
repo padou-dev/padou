@@ -181,7 +181,8 @@ class Change:
         if self.kind == "move":
             return f"moved to {self.dest}"
         if self.kind == "delete":
-            return f"moved to the Trash ({_count(self.files, self.folders)}, {human_size(self.size)})" if self.is_dir else "moved to the Trash"
+            where = f"moved to the {compat.TRASH}"
+            return f"{where} ({_count(self.files, self.folders)}, {human_size(self.size)})" if self.is_dir else where
         added, removed = self.stats
         return {"edit": "edited", "rewrite": "rewritten", "create": "created"}[self.kind] + f" (+{added} −{removed})"
 

@@ -21,6 +21,9 @@ OS_NAME = "windows" if WINDOWS else "macos" if MACOS else "linux" if LINUX else 
 # "README.md"), so safety checks must compare names case-insensitively there.
 CASE_INSENSITIVE_FS = WINDOWS or MACOS
 
+# What this system calls the place deleted files go.
+TRASH = "Recycle Bin" if WINDOWS else "Trash"
+
 
 def is_wsl() -> bool:
     """True inside Windows Subsystem for Linux."""
