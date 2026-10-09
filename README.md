@@ -124,7 +124,9 @@ On Windows, run `.\install.ps1` in PowerShell instead (see the **[Windows guide]
 
 This puts a `padou` command in `~/.local/bin` (`%USERPROFILE%\.local\bin` on Windows), so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
 
-Working on padou's code yourself? Install it **editable** instead, so your changes take effect without reinstalling:
+If the folder is a git clone, the installer sets padou up **editable**: it runs straight from the clone, so a `git pull` (or `/update`) takes effect the next time you start padou. A downloaded copy (no `.git` folder) is installed as a fixed copy instead.
+
+To switch an existing install to editable yourself, run this in the clone:
 
 ```bash
 uv tool install --editable .

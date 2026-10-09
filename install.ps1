@@ -25,8 +25,14 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 # 2. padou itself, in its own isolated environment
 $here = if ($PSScriptRoot) { $PSScriptRoot } else { "" }
 if ($here -and (Test-Path (Join-Path $here "pyproject.toml"))) {
-    Say "Installing padou from $here ..."
-    uv tool install --force --reinstall "$here"
+    if (Test-Path (Join-Path $here ".git")) {
+        # A git clone: install it "editable", so `git pull` and /update take effect straight away
+        Say "Installing padou from your clone in $here ..."
+        uv tool install --force --reinstall --editable "$here"
+    } else {
+        Say "Installing padou from $here ..."
+        uv tool install --force --reinstall "$here"
+    }
 } else {
     Say "Installing padou from GitHub ..."
     uv tool install --force "git+https://github.com/padou-dev/padou"

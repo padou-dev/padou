@@ -24,8 +24,14 @@ fi
 
 # 2. padou itself, in its own isolated environment
 if [ -f pyproject.toml ]; then
-    say "Installing padou from this folder..."
-    uv tool install --force --reinstall .
+    if [ -e .git ]; then
+        # a git clone: install it "editable", so `git pull` and /update take effect straight away
+        say "Installing padou from your clone..."
+        uv tool install --force --reinstall --editable .
+    else
+        say "Installing padou from this folder..."
+        uv tool install --force --reinstall .
+    fi
 else
     say "Installing padou from GitHub..."
     uv tool install --force "git+https://github.com/padou-dev/padou"

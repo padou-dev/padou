@@ -45,7 +45,7 @@ irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-The installer is short; read it first if you like. It installs the `padou` command with uv, then starts `padou setup`. The setup wizard looks at your system, finds llama.cpp or Ollama, recommends a model and writes the config. It never changes system settings.
+If the folder is a git clone, padou is installed **editable**: it runs from the clone, so `git pull` or `/update` takes effect the next time you start padou. The installer is short; read it first if you like. It installs the `padou` command with uv, then starts `padou setup`. The setup wizard looks at your system, finds llama.cpp or Ollama, recommends a model and writes the config. It never changes system settings.
 
 ## 4. Start padou
 
