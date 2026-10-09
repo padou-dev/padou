@@ -406,8 +406,11 @@ class App:
             if not line:
                 continue
             if line.startswith("/"):
-                if commands.dispatch(self, line) == commands.EXIT:
-                    break
+                try:
+                    if commands.dispatch(self, line) == commands.EXIT:
+                        break
+                except KeyboardInterrupt:  # Ctrl+C stops a slow command, not padou
+                    ui.info(self.theme, "(cancelled)")
                 continue
             ui.console.print()
             self.ask(line)

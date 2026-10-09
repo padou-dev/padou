@@ -183,6 +183,17 @@ def _run(argv: list[str], cwd: Path | None = None) -> tuple[int, str]:
     return p.returncode, ((p.stdout or "") + (p.stderr or "")).strip()
 
 
+def _run_visible(argv: list[str], cwd: Path | None = None) -> int:
+    """Run a command in the open, so its progress and any questions (like an SSH
+    key's passphrase) appear in the terminal and can be answered. Ctrl+C stops it."""
+    print(f"$ {compat.join_command(argv)}", flush=True)
+    try:
+        return subprocess.run(argv, cwd=cwd).returncode
+    except OSError as exc:
+        print(exc)
+        return 1
+
+
 def _fingerprint(folder: Path) -> str:
     """Changes when the dependencies change (then the tool needs reinstalling, not just a pull)."""
     try:
@@ -214,18 +225,16 @@ def update_git_clone(folder: Path) -> Outcome:
     if out.strip():
         return Outcome(False, f"{folder} has uncommitted changes. Commit or stash them, then /update again.")
     before = _fingerprint(folder)
-    code, out = _run(["git", "pull", "--ff-only"], folder)
-    if code != 0:
-        return Outcome(False, f"git pull failed:\n{out}")
+    if _run_visible(["git", "pull", "--ff-only"], folder) != 0:
+        return Outcome(False, "git pull didn't finish (see its message above). Nothing was changed.")
     if _fingerprint(folder) == before:
         return Outcome(True, "Pulled the latest code.", restart=True)
     reinstall = ["uv", "tool", "install", "--force", "--editable", str(folder)]
     if compat.WINDOWS:
         return Outcome(True, "Pulled the latest code. Its dependencies changed, so the tool is reinstalled after you quit.",
                        restart=True, after_exit=reinstall)
-    code, out = _run(reinstall)
-    if code != 0:
-        return Outcome(False, f"Pulled the code, but reinstalling failed:\n{out}")
+    if _run_visible(reinstall) != 0:
+        return Outcome(False, "Pulled the code, but reinstalling failed (see above). Run: " + compat.join_command(reinstall))
     return Outcome(True, "Pulled the latest code and reinstalled (the dependencies changed).", restart=True)
 
 
@@ -236,9 +245,8 @@ def update_uv_tool(release: Release) -> Outcome:
     if compat.WINDOWS:
         return Outcome(True, f"padou {release.version} will be installed in a new window as soon as you quit.",
                        restart=True, after_exit=command)
-    code, out = _run(command)
-    if code != 0:
-        return Outcome(False, f"The install failed:\n{out}")
+    if _run_visible(command) != 0:
+        return Outcome(False, "The install didn't finish (see above). Your current padou is unchanged.")
     return Outcome(True, f"Installed padou {release.version}.", restart=True)
 
 

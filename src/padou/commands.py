@@ -530,8 +530,13 @@ def cmd_update(app: "App", arg: str):
         return
     if not ui.confirm("Update now?", default=True):
         return
-    with ui.ReplyView(th, "updating…"):
+    if install.kind == "git":
+        ui.info(th, "Running git pull. If your SSH key has a passphrase, git asks for it here. Ctrl+C cancels.")
+    try:
         outcome = updates.update_git_clone(install.folder) if install.kind == "git" else updates.update_uv_tool(release)
+    except KeyboardInterrupt:
+        ui.info(th, "Update cancelled. Nothing was changed.")
+        return
     if not outcome.ok:
         ui.error(th, outcome.message)
         return
