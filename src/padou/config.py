@@ -1,4 +1,4 @@
-"""Loading padou's configuration from ~/.config/padou/config.toml."""
+"""Loading padou's configuration (config.toml; see paths.py for where it lives)."""
 
 from __future__ import annotations
 
@@ -10,13 +10,14 @@ from pathlib import Path
 from padou import paths
 
 DEFAULT_SYSTEM_PROMPT = """\
-You are padou, a concise assistant running locally in the user's Linux terminal.
+You are padou, a concise assistant running locally in the user's terminal.
 You help with general questions, system administration and coding.
 
-You are READ-ONLY. Through your tools you can read files, list directories,
-search text in files and run a small set of approved read-only system commands.
-You cannot edit files, install software or run arbitrary commands. When a change
-is needed, show the exact command for the user to run themselves.
+By default you are READ-ONLY. Through your tools you can read files, list
+directories, search text in files and run a small set of approved read-only
+system commands. You cannot install software or run arbitrary commands. When a
+change is needed, show the exact command for the user to run themselves (unless
+write mode is on, as described below).
 
 Use a tool whenever the answer depends on the user's actual system instead of
 guessing. Never invent file contents or command output. Keep answers short and
@@ -68,11 +69,17 @@ class UIConfig:
 
 
 @dataclass
+class UpdatesConfig:
+    check: bool = True  # once a day, ask GitHub (in the background) whether a newer padou exists
+
+
+@dataclass
 class Config:
     server: ServerConfig = field(default_factory=ServerConfig)
     chat: ChatConfig = field(default_factory=ChatConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
     ui: UIConfig = field(default_factory=UIConfig)
+    updates: UpdatesConfig = field(default_factory=UpdatesConfig)
     source: Path | None = None
     warnings: list[str] = field(default_factory=list)
 
@@ -106,7 +113,7 @@ def load(path: Path | None = None) -> Config:
     except (tomllib.TOMLDecodeError, OSError) as exc:
         cfg.warnings.append(f"could not read {path}: {exc}")
         return cfg
-    for name in ("server", "chat", "tools", "ui"):
+    for name in ("server", "chat", "tools", "ui", "updates"):
         section = data.pop(name, None)
         if section is None:
             continue
@@ -137,8 +144,7 @@ def render(server: ServerConfig | None = None, banner: str = "full") -> str:
     """The full, commented config file, with the [server] values filled in."""
     s = server or ServerConfig()
     return f"""\
-# padou configuration
-# Location: ~/.config/padou/config.toml   (re-create it any time with: padou setup)
+# padou configuration   (re-create it any time with: padou setup)
 
 [server]
 # Any OpenAI-compatible server: llama.cpp (llama-server), Ollama, LM Studio...
@@ -173,6 +179,9 @@ clear_on_start = true                   # clear the terminal before the banner
 animation = true                        # animated compass star (false = still)
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
+
+[updates]
+check = true                            # once a day, ask GitHub if a newer padou exists (then: /update)
 """
 
 

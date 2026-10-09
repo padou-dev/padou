@@ -8,7 +8,7 @@ import sys
 
 from rich.text import Text
 
-from padou import paths, ui
+from padou import compat, paths, ui
 from padou.client import Client, ServerError
 from padou.config import Config
 from padou.theme import Theme
@@ -18,6 +18,7 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
     checks: list[tuple[str, bool | None, str]] = []  # None = just information
 
     checks.append(("Python", sys.version_info >= (3, 11), sys.version.split()[0]))
+    checks.append(("System", None, compat.OS_NAME + (" (WSL)" if compat.is_wsl() else "")))
 
     if cfg.source:
         checks.append(("Config file", not cfg.warnings, f"{ui.short_path(cfg.source)}" + (f" ({len(cfg.warnings)} problems)" if cfg.warnings else "")))
@@ -54,7 +55,12 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
         checks.append(("Sessions folder", writable, ui.short_path(paths.SESSIONS_DIR)))
     except OSError as exc:
         checks.append(("Sessions folder", False, str(exc)))
-    clip = next((c for c in ("wl-copy", "xclip", "pbcopy", "clip.exe") if shutil.which(c)), None)
+    from padou import updates
+
+    install = updates.detect_install()
+    how = {"git": f"from a git clone ({ui.short_path(install.folder)})", "uv-tool": "with uv tool", "other": "with pip or another tool"}[install.kind]
+    checks.append(("Updates", None, ("checked daily; " if updates.enabled(cfg) else "automatic check off; ") + f"installed {how}; /update"))
+    clip = next((argv[0] for argv in compat.clipboard_commands() if shutil.which(argv[0])), None)
     checks.append(("Clipboard (/copy)", bool(clip), clip or "install wl-clipboard"))
 
     rows = []

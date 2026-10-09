@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme as RichTheme
 
-from padou import __version__
+from padou import __version__, compat
 from padou.theme import Theme
 
 console = Console(highlight=False, record=True)  # record=True lets /screenshot save the screen
@@ -50,7 +50,7 @@ def md(text: str) -> Markdown:
 def short_path(p: Path | str) -> str:
     p = Path(p)
     try:
-        return "~/" + str(p.relative_to(Path.home())) if p != Path.home() else "~"
+        return "~" + os.sep + str(p.relative_to(Path.home())) if p != Path.home() else "~"
     except ValueError:
         return str(p)
 
@@ -89,21 +89,34 @@ def compact_banner(theme: Theme, model_label: str) -> Text:
 
 
 class _Keys:
-    """Notice a keypress (to skip the launch) without echoing it. POSIX terminals only."""
+    """Notice a keypress (to skip the launch) without echoing it."""
 
     def __init__(self):
         self.old = None
+        self.windows = False
         try:
+            if not os.isatty(0):
+                return
+            if compat.WINDOWS:
+                self.windows = True
+                return
             import termios
             import tty
 
-            if os.isatty(0):
-                self.old = termios.tcgetattr(0)
-                tty.setcbreak(0)
+            self.old = termios.tcgetattr(0)
+            tty.setcbreak(0)
         except Exception:
             self.old = None
 
     def pressed(self) -> bool:
+        if self.windows:
+            import msvcrt
+
+            if msvcrt.kbhit():
+                while msvcrt.kbhit():
+                    msvcrt.getwch()  # swallow it, so it doesn't land in the prompt
+                return True
+            return False
         if self.old is None:
             return False
         import select
@@ -252,15 +265,18 @@ def table(theme: Theme, title: str, columns: list[str], rows: list[list], styles
     console.print(t)
 
 
-def show_change(theme: Theme, change, max_lines: int = 80) -> None:
-    """A proposed file change as a coloured diff."""
-    added, removed = change.stats
-    verb = "Edit" if change.kind == "edit" else "Create"
-    console.print(Text.assemble(("✎ ", f"bold {theme.warn}"), (f"{verb} {short_path(change.path)}", "bold"),
-                                (f"  +{added} −{removed}", theme.dim)))
-    if change.reason:
-        console.print(Text(f"  {change.reason}", style=theme.dim))
+_VERBS = {
+    "edit": ("✎", "Edit"),
+    "rewrite": ("✎", "Rewrite"),
+    "create": ("✚", "Create"),
+    "move": ("➜", "Move"),
+    "delete": ("✖", "Delete"),
+}
+
+
+def _diff_lines(theme: Theme, change, max_lines: int) -> list[Text]:
     lines = change.diff()[2:]  # skip the ---/+++ header lines
+    out = []
     for line in lines[:max_lines]:
         if line.startswith("+"):
             style = theme.ok
@@ -270,9 +286,70 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
             style = theme.accent
         else:
             style = theme.dim
-        console.print(Text("  " + line, style=style), soft_wrap=True)
+        out.append(Text(line, style=style))
     if len(lines) > max_lines:
-        console.print(Text(f"  … {len(lines) - max_lines} more diff lines", style=theme.dim))
+        out.append(Text(f"… {len(lines) - max_lines} more diff lines", style=theme.dim))
+    return out
+
+
+def show_change(theme: Theme, change, max_lines: int = 80) -> None:
+    """A proposed change, in a box: what will happen, and exactly to what."""
+    from padou.writes import human_size
+
+    icon, verb = _VERBS.get(change.kind, ("•", change.kind.title()))
+    body: list = []
+    if change.kind == "move":
+        body.append(Text.assemble(("from  ", theme.dim), (short_path(change.path) + (os.sep if change.is_dir else ""), "bold")))
+        body.append(Text.assemble(("to    ", theme.dim), (short_path(change.dest), "bold")))
+    elif change.kind == "delete":
+        if change.is_dir:
+            body.append(Text.assemble(("Folder with ", ""), (f"{change.files} files and {change.folders} folders", "bold"),
+                                      (f" ({human_size(change.size)})", theme.dim)))
+            try:
+                entries = sorted(change.path.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+            except OSError:
+                entries = []
+            for e in entries[:8]:
+                body.append(Text("  " + e.name + (os.sep if e.is_dir() else ""), style=theme.dim))
+            if len(entries) > 8:
+                body.append(Text(f"  … and {len(entries) - 8} more", style=theme.dim))
+        else:
+            body.append(Text.assemble(("File, ", ""), (human_size(change.size), theme.dim)))
+        body.append(Text("It goes to the system Trash" + (" (Recycle Bin)" if compat.WINDOWS else "") +
+                         ", so you can restore it from there.", style=theme.dim))
+        for w in change.warnings:
+            body.append(Text("⚠ " + w, style=f"bold {theme.warn}"))
+    else:
+        added, removed = change.stats
+        body.append(Text(f"+{added} −{removed} lines", style=theme.dim))
+        body.extend(_diff_lines(theme, change, max_lines))
+    for folder in getattr(change, "new_folders", []):
+        body.append(Text.assemble(("+ new folder ", theme.ok), (short_path(folder), "")))
+    if change.kind != "move":
+        body.insert(0, Text(short_path(change.path) + (os.sep if change.is_dir else ""), style="bold"))
+    if change.reason:
+        body.insert(0, Text(change.reason, style=f"italic {theme.dim}"))
+    what = "folder " if change.is_dir else ""
+    title = Text.assemble((f" {icon} ", f"bold {theme.warn}"), (f"{verb} {what}", "bold"), (change.path.name, "bold"), (" ", ""))
+    console.print(Panel(Group(*body), title=title, title_align="left", border_style=theme.warn, padding=(0, 1)))
+
+
+def ask_approval(theme: Theme, change) -> bool:
+    """Ask the user to approve a change. Folders to delete need their name typed."""
+    if getattr(change, "needs_typed_confirmation", False):
+        name = change.path.name
+        try:
+            answer = console.input(Text.assemble(("  To delete this folder, type its name ", theme.warn),
+                                                 (name, f"bold {theme.warn}"), (" (or press Enter to keep it): ", theme.warn)))
+        except (KeyboardInterrupt, EOFError):
+            console.print()
+            return False
+        if answer.strip() != name:
+            if answer.strip():
+                console.print(Text("  That didn't match the folder's name.", style=theme.dim))
+            return False
+        return True
+    return confirm("  Apply this change?", default=False)
 
 
 def confirm(question: str, default: bool = False) -> bool:

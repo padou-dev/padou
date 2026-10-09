@@ -6,7 +6,7 @@ A lightweight, local-first AI assistant for your terminal, built for small model
 
 <p align="center"><img src="docs/screenshots/chat.svg" alt="padou answering questions with its read-only tools" width="760"></p>
 
-padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools. Nothing leaves your machine except the requests padou sends to the server you configure.
+padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools, or, when you allow it, change files with your approval. Nothing leaves your machine except the requests padou sends to the server you configure.
 
 > [!NOTE]
 > **padou** (παντού, pronounced "padoú") is Greek for "everywhere". This is a learning project, version 0.x. Expect rough edges.
@@ -18,9 +18,11 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 
 - **The compass star:** padou's mark. παντού means "everywhere", in every direction: on launch, dots gather from everywhere into the star while παντού decodes into padou, and the rays keep shooting outward. Turn it off with `[ui] animation = false`.
 - **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
-- **Read-only by default, write mode when you want it:** `/write <folder>` lets padou edit text files in one folder; every change is shown as a diff and needs your yes, and `/undo` reverts it.
-- **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands (`df`, `journalctl -u`, `systemctl status`, `pacman -Q`…).
-- **Safety by design (read tools):** no shell, no `sudo`, strict argument checks, and secrets (`~/.ssh`, `~/.gnupg`, keyrings, `.env`, private keys, browser profiles) blocked even through symlinks.
+- **Linux, macOS and Windows:** one padou for all three, with the right commands, folders and Trash for each system.
+- **Read-only by default, write mode when you want it:** `/write <folder>` lets padou edit, create, move and delete (to the Trash) files in one folder; every change is shown in a confirmation box and needs your yes, and `/undo` reverts it.
+- **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands for your OS (`df`, `systemctl status`, `ipconfig`, `sw_vers`…).
+- **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (SSH and GPG keys, keychains and credential stores, `.env`, private keys, browser profiles) blocked even through symlinks.
+- **Updates:** once a day padou checks quietly for a new version; `/update` installs it.
 - **Sessions:** every conversation is saved; continue with `/resume` or `padou -c`.
 - **Omarchy aware:** picks up the accent colour of your current Omarchy theme, with a built-in palette everywhere else.
 - **Small-model friendly:** short system prompt, few tools, capped tool output, `/compact` when the context fills up.
@@ -31,17 +33,21 @@ Small models are fast and private, but they're not Claude or GPT. They're good a
 
 ## Platforms
 
+One padou runs everywhere: the same code, with the right commands, folders and Trash for each system.
+
 | Platform | Status |
 |---|---|
-| **Linux** | ✅ Developed and tested on Arch / Omarchy 4 |
-| **Windows (WSL)** | ✅ It's Linux, so it should work like Linux. **[Step-by-step guide](docs/install_windows_wsl.md)** |
-| **macOS** | 🟡 Untested. Chat should work; several approved commands are Linux-only |
-| **Windows (native)** | 🟡 Untested. Chat may work; the system commands, `/copy` and GPU detection are Linux-only |
+| **Linux** | ✅ Developed and used daily on Arch / Omarchy 4 |
+| **Windows 10 / 11** | ✅ Native, in PowerShell or Windows Terminal. **[Install guide](docs/install_windows.md)** |
+| **Windows (WSL)** | ✅ Works like Linux. **[WSL guide](docs/install_windows_wsl.md)** |
+| **macOS** | ✅ Apple Silicon and Intel (Metal on Apple Silicon) |
+
+Every push is tested automatically on Linux, macOS and Windows by GitHub Actions ([the tests](.github/workflows/tests.yml)). Day-to-day use is mostly on Linux, so if something feels off on your system, please open an issue.
 
 ## Requirements
 
-- Linux (developed on Arch / Omarchy 4); see [Platforms](#platforms)
-- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
+- Linux, macOS or Windows; see [Platforms](#platforms)
+- [`uv`](https://docs.astral.sh/uv/) (it installs Python 3.11+ for you if needed)
 - An OpenAI-compatible model server. For llama.cpp, start it **with `--jinja`**, which tool calling needs.
 
 ## Quick start
@@ -51,6 +57,8 @@ uv tool install git+https://github.com/padou-dev/padou
 padou
 ```
 
+On Windows, in PowerShell: `irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex` (it installs uv too if you want). See the [Windows guide](docs/install_windows.md).
+
 The first time you run `padou`, the **setup wizard** starts. It looks at your OS, GPU and RAM, finds any model server you already have (llama.cpp, Ollama or LM Studio), recommends a model, writes the config, and offers to start the server. If you have no model server yet, it shows the exact install command for your system. Re-run it any time with `padou setup`.
 
 The rest of this section explains what the wizard does for you, in case you'd rather do it by hand.
@@ -59,7 +67,7 @@ The rest of this section explains what the wizard does for you, in case you'd ra
 
 | Backend | Good for | Install |
 |---|---|---|
-| **llama.cpp** (recommended) | Smallest, fastest; padou can start it and download the model for you | Arch: `yay -S llama.cpp-vulkan-git` · macOS/Linux: `brew install llama.cpp` · CUDA/Vulkan: `conda install -c conda-forge llama.cpp` · or [prebuilt releases](https://github.com/ggml-org/llama.cpp/releases) |
+| **llama.cpp** (recommended) | Smallest, fastest; padou can start it and download the model for you | Arch: `yay -S llama.cpp-vulkan-git` · macOS/Linux: `brew install llama.cpp` · Windows: `winget install llama.cpp` · CUDA/Vulkan: `conda install -c conda-forge llama.cpp` · or [prebuilt releases](https://github.com/ggml-org/llama.cpp/releases) |
 | **Ollama** | The easiest install; manages models for you | Linux: `curl -fsSL https://ollama.com/install.sh \| sh` · macOS: `brew install ollama` |
 | **LM Studio** | A desktop app with a model browser | [lmstudio.ai](https://lmstudio.ai), then turn on its local server |
 
@@ -109,12 +117,12 @@ Or with Ollama: `ollama pull qwen3.5:4b`, then set `url = "http://127.0.0.1:1143
 ```bash
 git clone git@github.com:padou-dev/padou.git
 cd padou
-./install.sh            # or: uv tool install .
+./install.sh            # Linux and macOS (or: uv tool install .)
 ```
 
-On Windows? Follow the **[WSL guide](docs/install_windows_wsl.md)**.
+On Windows, run `.\install.ps1` in PowerShell instead (see the **[Windows guide](docs/install_windows.md)**), or use the **[WSL guide](docs/install_windows_wsl.md)**.
 
-This puts a `padou` command in `~/.local/bin`, so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
+This puts a `padou` command in `~/.local/bin` (`%USERPROFILE%\.local\bin` on Windows), so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
 
 Working on padou's code yourself? Install it **editable** instead, so your changes take effect without reinstalling:
 
@@ -157,12 +165,13 @@ padou --version
 | `/clear` | Start a fresh conversation (the old one is saved) |
 | `/models [n\|name]` | List models, or switch to one (downloads it if needed) |
 | `/status` | Model, server, context use and speed |
-| `/copy` | Copy the last reply to the clipboard (`wl-copy`) |
+| `/copy` | Copy the last reply to the clipboard |
 | `/tools` | List the tools padou may use |
 | `/write [<folder>\|off]` | Let padou change files in one folder, this session only (you approve every change) |
-| `/undo` | Undo padou's last file change |
-| `/changes` | List the files padou changed this session |
+| `/undo` | Undo padou's last change (edits, new files, moves and deletions) |
+| `/changes` | List everything padou changed this session |
 | `/server [stop\|restart\|log]` | The model server: status and memory, stop, restart, or its log |
+| `/update` | Check for a newer padou and install it |
 | `/folder [add <path>]` | Folders padou may read: list, `add <path> [--always]`, `remove <n>`, `anywhere`, `restrict` |
 | `/resume [n]` | List saved sessions, or continue one |
 | `/compact` | Summarise the conversation to free up context |
@@ -188,7 +197,7 @@ By default padou's file tools can only read **the folder you started it in**. Ne
 /folder restrict             back to the allowed folders
 ```
 
-The model is told which folders it may use, and padou refuses anything outside them, including through symlinks. Secret locations stay blocked even in `anywhere` mode. The approved system commands (`df`, `journalctl`, `systemctl status`…) aren't affected, since they report on the system rather than reading your files.
+The model is told which folders it may use, and padou refuses anything outside them, including through symlinks. Secret locations stay blocked even in `anywhere` mode. The approved system commands (`df`, `systemctl status`, `ipconfig`…) aren't affected, since they report on the system rather than reading your files.
 
 To change the default, set `[tools] scope = "anywhere"` and/or list folders in `[tools] folders = ["~/Projects", "/etc"]`.
 
@@ -202,22 +211,34 @@ padou is **read-only by default**. To let it change files, turn on write mode fo
 ```
 /write ~/Projects/my-app      padou may change files here (and in subfolders), this session only
 /write                        show where write mode is on
-/undo                         put the last change back
+/undo                         put the last change back (run it again for the one before)
 /changes                      list everything padou changed this session
 /write off                    read-only again
 ```
 
+What padou can do there, each one only after you approve it:
+
+| Tool | What it does |
+|---|---|
+| `edit_file` | Replace one exact, unique piece of text (reliable even for small models) |
+| `rewrite_file` | Replace a whole file; you see the full diff |
+| `write_file` | Create a **new** file (never overwrites), plus any missing folders, which are listed |
+| `move_path` | Move or rename a file or folder; never overwrites |
+| `delete_path` | Move a file or folder to the system **Trash** (Recycle Bin on Windows) |
+
 How it stays safe:
 
-- **You approve every change.** padou shows a coloured diff and asks `Apply this change? [y/N]`; the default is **no**. There's no "approve everything" switch.
-- **Two small tools only:** `edit_file` replaces one exact, unique piece of text (reliable even for small models), and `write_file` creates **new** files and never overwrites. padou can't delete, rename, change permissions or run commands.
-- **Backups and undo:** every edited file is copied to `~/.local/state/padou/backups/` first. `/undo` restores it, and undoing a newly created file moves it there instead of deleting it.
-- **Never in sensitive places:** not `/`, not your whole home folder, not system folders (`/etc`, `/usr`, `/boot`…), not hidden folders (`~/.config`, `~/.ssh`…), not inside `.git`, not secret files, not through symlinks, and only in folders padou may already read.
+- **You approve every change in a confirmation box.** It shows exactly what will happen: a coloured diff, where something moves, or what's inside a folder about to be deleted. The answer defaults to **no**. There's no "approve everything" switch.
+- **Deleting a folder means typing its name**, not just `y`. The box shows how many files are inside, their size, and warnings (a `.git` repository, files that look like secrets). The write folder itself can never be deleted or moved.
+- **Nothing is destroyed:** deleted things go to the system Trash, where you can restore them. padou also keeps its own copy of anything up to 20 MB, so `/undo` can bring it straight back.
+- **Backups and undo:** edited files are copied to padou's backup folder first. `/undo` restores them, moves things back, and moves a newly created file aside rather than deleting it.
+- **Never in sensitive places:** not a drive root, not your whole home folder, not system folders (`/etc`, `/usr`, `C:\Windows`, `C:\Program Files`, `/System`…), not hidden or settings folders (`~/.config`, `AppData`, `~/Library`), not inside `.git`, not secret files, not through symlinks, and only in folders padou may already read.
+- **Line endings kept:** a file with Windows line endings keeps them.
 - **Never saved:** write mode always starts off, and nothing in the config can turn it on permanently.
 - **Always visible:** the status line shows `✎ write: <folder>` in the warning colour while it's on.
 
 > [!WARNING]
-> Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now edit ~/.bashrc*). **Read every diff before you say yes**, and keep your work in Git so you can always go back.
+> Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now delete the src folder*). **Read every box before you say yes**, and keep your work in Git so you can always go back.
 
 ## Switching models
 
@@ -231,7 +252,7 @@ Your choice is saved, so padou starts with it next time. A model you set yoursel
 
 ## The model server
 
-If padou starts `llama-server` for you, it runs **in the background** (no window) and **keeps running after you quit**, so the next start is instant. Its output goes to `~/.local/state/padou/llama-server.log`.
+If padou starts `llama-server` for you, it runs **in the background** (no window) and **keeps running after you quit**, so the next start is instant. Its output goes to `llama-server.log` in padou's state folder (see [Where padou keeps things](#where-padou-keeps-things)).
 
 ```
 /server            is it answering? process ID, memory use, log path
@@ -241,6 +262,22 @@ If padou starts `llama-server` for you, it runs **in the background** (no window
 ```
 
 Prefer it to stop when you quit padou? Set `[server] stop_on_exit = true` (padou only stops a server it started itself).
+
+## Updates
+
+Once a day, in the background, padou asks GitHub whether a newer version has been released. It never slows the start, and it sends nothing about you or your conversations: it's one request for the latest release. If there's a new one you'll see:
+
+```
+✓ padou 0.3.0 is available (you have 0.2.0). Type /update to get it.
+```
+
+and `⬆ 0.3.0 available: /update` in the status line. `/update` shows what's new, asks, and installs it the way you installed padou:
+
+- **From a git clone** (`uv tool install --editable .`): `git pull`, plus a reinstall if the dependencies changed. It refuses if you have uncommitted changes.
+- **With `uv tool install git+https://...`**: the same install, pinned to the new version.
+- **On Windows**, a running program can't replace itself, so the install finishes in a new window right after you quit padou.
+
+Turn the daily check off with `[updates] check = false` (or `PADOU_NO_UPDATE_CHECK=1`). `/update` still works whenever you type it.
 
 ## Tools
 
@@ -258,18 +295,27 @@ padou's model can only **ask** to use a tool; padou's own code decides whether t
 | `search` | Case-insensitive text or regex search in a file or folder (skips `.git`, `.venv`, `node_modules`) |
 | `run_command` | One entry from the approved list below |
 
-Approved commands: `disk_usage`, `memory`, `uptime`, `kernel`, `ip_addresses`, `routes`, `block_devices`, `processes`, `failed_services`, `service_status <service>`, `user_service_status <service>`, `service_logs <service>`, `recent_errors`, `package_info <package>`, `package_details <package>`, `which <program>`, `gpu_vulkan`, `sensors`, `git_status`, `git_log`.
+Approved commands, per system (type `/tools` to see yours):
+
+| System | Commands |
+|---|---|
+| **Linux** | `disk_usage`, `memory`, `uptime`, `kernel`, `ip_addresses`, `routes`, `listening_ports`, `block_devices`, `processes`, `failed_services`, `service_status <service>`, `user_service_status <service>`, `service_logs <service>`, `recent_errors`, `package_info <package>` and `package_details <package>` (pacman, dpkg or rpm, whichever you have), `which <program>`, `gpu_vulkan`, `sensors` |
+| **macOS** | `disk_usage`, `memory`, `uptime`, `os_version`, `kernel`, `hardware`, `gpu`, `battery`, `ip_addresses`, `routes`, `listening_ports`, `block_devices`, `processes`, `services`, `recent_errors`, `package_info <package>` (Homebrew), `which <program>` |
+| **Windows** | `disk_usage`, `memory`, `uptime`, `os_version`, `hardware`, `ip_addresses`, `routes`, `listening_ports`, `processes`, `stopped_services`, `service_status <service>`, `recent_errors`, `package_info <package>` (winget), `which <program>` |
+| **All** | `git_status`, `git_log` |
+
+On Windows a few of these are short, fixed PowerShell one-liners written into padou; the model can never add to them.
 
 > [!IMPORTANT]
 > **The safety rules:** commands are run as argument lists with `shell=False`, so `;`, `&&` and `$(...)` mean nothing. Arguments must match `^[A-Za-z0-9@._:+-]{1,64}$` and can't start with `-`. No `sudo`, ever. Tool output is capped (8000 characters by default) so logs can't flood the context.
 
 ## Autostart
 
-When you run `padou` and nothing is listening at the configured address, padou starts `llama-server` itself, using `[server] start_command`, and shows a spinner until the model is loaded. The first start downloads the model (~2.5 GB), so it can take a few minutes; after that it's a few seconds.
+When you run `padou` and nothing is listening at the configured address, padou starts `llama-server` itself, using `[server] start_command`, and shows a spinner until the model is loaded. The first start downloads the model (about 3 GB for the default), so it can take a few minutes; after that it's a few seconds.
 
 - It only happens for servers on **this machine** (`127.0.0.1` / `localhost`).
-- The server **keeps running** after padou exits, so the next launch is instant. Stop it with `pkill -f llama-server`.
-- Its output goes to `~/.local/state/padou/llama-server.log`.
+- The server **keeps running** after padou exits, so the next launch is instant. Stop it with `/server stop`.
+- Its output goes to padou's state folder (see [Where padou keeps things](#where-padou-keeps-things)); `/server log` shows it.
 - Turn it off with `[server] autostart = false`, or `--no-autostart` for one run. The [systemd service](contrib/llama-server.service) is the alternative if you'd rather the server always runs.
 
 > [!NOTE]
@@ -277,7 +323,7 @@ When you run `padou` and nothing is listening at the configured address, padou s
 
 ## Configuration
 
-`padou --init-config` writes `~/.config/padou/config.toml`. Every setting is optional:
+`padou --init-config` writes the config file (where: see below; `padou doctor` shows it too). Every setting is optional:
 
 ```toml
 [server]
@@ -304,18 +350,21 @@ banner = "full"        # or "compact"
 clear_on_start = true  # clear the terminal before the banner
 animation = true       # the compass-star launch and pulse
 accent = ""            # e.g. "#ff5fa2"; empty = Omarchy theme accent
+
+[updates]
+check = true           # once a day, ask GitHub if a newer padou exists
 ```
 
 See [`config.example.toml`](config.example.toml) for every option.
 
 ### Where padou keeps things
 
-| What | Where |
-|---|---|
-| Config | `~/.config/padou/config.toml` |
-| Saved sessions | `~/.local/share/padou/sessions/` |
-| Autostarted server's log | `~/.local/state/padou/llama-server.log` |
-| Input history | `~/.local/share/padou/history` |
+| What | Linux and macOS | Windows |
+|---|---|---|
+| Config | `~/.config/padou/config.toml` | `%APPDATA%\padou\config.toml` |
+| Saved sessions | `~/.local/share/padou/sessions/` | `%LOCALAPPDATA%\padou\data\sessions\` |
+| Input history | `~/.local/share/padou/history` | `%LOCALAPPDATA%\padou\data\history` |
+| Server log, backups, update check | `~/.local/state/padou/` | `%LOCALAPPDATA%\padou\state\` |
 
 ## Extras
 
@@ -339,30 +388,42 @@ See [`config.example.toml`](config.example.toml) for every option.
 | The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
 | Setup recommends the wrong model | It's only a suggestion from your RAM and GPU. Pick another number, or edit `[server]` in the config |
 | Setup says llama.cpp is a CPU-only build | You have a GPU but installed the CPU build. Install the Vulkan (AMD/Intel), CUDA (NVIDIA) or Metal (Mac) build, then `padou setup` |
-| `padou: command not found` after install | `~/.local/bin` isn't on your PATH. Add it, or run `uv tool update-shell` |
-| `llama-server exited with code 1` on start | Read the log: `tail -50 ~/.local/state/padou/llama-server.log`. Often the port is taken or the model name is wrong |
+| `padou: command not found` after install | uv's tool folder isn't on your PATH. Run `uv tool update-shell` and open a new terminal |
+| `the server exited with code 1` on start | Read the log with `/server log`. Often the port is taken or the model name is wrong |
+| A delete says the Trash can't take it | Some drives (network shares, some USB sticks) have no Trash. padou then refuses and deletes nothing |
+| `/undo` says to restore from the Trash | The deleted item was over 20 MB, so padou didn't keep its own copy. Restore it from the Trash / Recycle Bin |
+| `/update` says GitHub can't be reached | You're offline, or no release has been published yet. `/update` works fine again later |
+| Windows: odd characters instead of the star or boxes | Use **Windows Terminal** (the default on Windows 11) rather than the old console window |
+| Windows: `running scripts is disabled` | Run the installer with `powershell -ExecutionPolicy Bypass -File .\install.ps1` |
 | The banner cursor doesn't blink | Your terminal ignores the text-blink attribute (Alacritty does, for example). Nothing to fix in padou; other terminals may show it |
 | Colours look wrong | Set `[ui] accent = "#rrggbb"`, or `NO_COLOR=1 padou` for no colour |
-| `/copy` fails | Install `wl-clipboard` (`sudo pacman -S wl-clipboard`) |
+| `/copy` fails | Linux: install `wl-clipboard` (Wayland) or `xclip` (X11). macOS and Windows have one built in |
 
 ## Uninstall
 
 ```bash
 uv tool uninstall padou
 systemctl --user disable --now llama-server 2>/dev/null; rm -f ~/.config/systemd/user/llama-server.service
-rm -rf ~/.config/padou ~/.local/share/padou     # config, sessions and history
+rm -rf ~/.config/padou ~/.local/share/padou ~/.local/state/padou    # config, sessions, history, logs
+```
+
+On Windows, in PowerShell:
+
+```powershell
+uv tool uninstall padou
+Remove-Item -Recurse "$env:APPDATA\padou", "$env:LOCALAPPDATA\padou"
 ```
 
 ## Privacy
 
-padou has no telemetry and makes no network requests of its own beyond the model server you configure (by default on `127.0.0.1`). `padou setup` only checks `127.0.0.1` ports 8080, 11434 and 1234 to find local servers. The model download comes from Hugging Face (llama.cpp) or Ollama's registry, made by those tools, not by padou.
+padou has no telemetry. Its only network requests are to the model server you configure (by default on `127.0.0.1`) and, at most once a day, one request to GitHub's public API asking for the latest padou release (turn it off with `[updates] check = false`). Nothing about you or your conversations is sent. `padou setup` only checks `127.0.0.1` ports 8080, 11434 and 1234 to find local servers. The model download comes from Hugging Face (llama.cpp) or Ollama's registry, made by those tools, not by padou.
 
 ## Development
 
 ```bash
 uv sync
 uv run padou           # run from the source tree
-uv run pytest          # tests for the tool safety rules, config and theme
+uv run pytest          # tests for the safety rules, write mode, updates, config and theme
 ```
 
 ## Disclaimer

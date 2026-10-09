@@ -20,43 +20,70 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from padou import compat
+
 # --------------------------------------------------------------------------- #
 # Sensitive paths
 # --------------------------------------------------------------------------- #
 
 _HOME = Path.home()
 
-BLOCKED_DIRS = [
-    _HOME / ".ssh",
-    _HOME / ".gnupg",
-    _HOME / ".password-store",
-    _HOME / ".local/share/keyrings",
-    _HOME / ".aws",
-    _HOME / ".kube",
-    _HOME / ".docker",
-    _HOME / ".config/gh",
-    _HOME / ".mozilla",
-    _HOME / ".config/BraveSoftware",
-    _HOME / ".config/chromium",
-    _HOME / ".config/google-chrome",
-    Path("/etc/ssl/private"),
-]
-if _HOME != Path("/root"):
-    BLOCKED_DIRS.append(Path("/root"))  # another user's home: never browse it
 
-BLOCKED_FILES = [
-    Path("/etc/shadow"),
-    Path("/etc/gshadow"),
-    Path("/etc/sudoers"),
-    _HOME / ".netrc",
-    _HOME / ".git-credentials",
-    _HOME / ".pgpass",
-]
+def _home_dirs(*names: str) -> list[Path]:
+    return [_HOME / n for n in names]
+
+
+# Folders that hold keys, passwords, tokens or browser profiles, per system.
+BLOCKED_DIRS = _home_dirs(".ssh", ".gnupg", ".password-store", ".aws", ".kube", ".docker", ".azure", ".gcloud")
+if compat.WINDOWS:
+    BLOCKED_DIRS += _home_dirs(
+        "AppData/Roaming/gnupg",
+        "AppData/Roaming/Microsoft/Credentials",
+        "AppData/Local/Microsoft/Credentials",
+        "AppData/Roaming/Microsoft/Protect",
+        "AppData/Roaming/Microsoft/Crypto",
+        "AppData/Roaming/GitHub CLI",
+        "AppData/Roaming/Mozilla",
+        "AppData/Local/Google/Chrome/User Data",
+        "AppData/Local/BraveSoftware",
+        "AppData/Local/Microsoft/Edge/User Data",
+        "AppData/Local/Chromium/User Data",
+    )
+    BLOCKED_DIRS.append(Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "config")
+elif compat.MACOS:
+    BLOCKED_DIRS += _home_dirs(
+        "Library/Keychains",
+        "Library/Cookies",
+        "Library/Application Support/Google/Chrome",
+        "Library/Application Support/BraveSoftware",
+        "Library/Application Support/Firefox",
+        "Library/Application Support/Microsoft Edge",
+        ".config/gh",
+    )
+    BLOCKED_DIRS += [Path("/Library/Keychains"), Path("/private/etc/ssh"), Path("/private/var/db/sudo")]
+else:
+    BLOCKED_DIRS += _home_dirs(
+        ".local/share/keyrings",
+        ".config/gh",
+        ".mozilla",
+        ".config/BraveSoftware",
+        ".config/chromium",
+        ".config/google-chrome",
+    )
+    BLOCKED_DIRS.append(Path("/etc/ssl/private"))
+    if _HOME != Path("/root"):
+        BLOCKED_DIRS.append(Path("/root"))  # another user's home: never browse it
+
+BLOCKED_FILES = _home_dirs(".netrc", ".git-credentials", ".pgpass", "_netrc")
+if compat.LINUX:
+    BLOCKED_FILES += [Path("/etc/shadow"), Path("/etc/gshadow"), Path("/etc/sudoers")]
+elif compat.MACOS:
+    BLOCKED_FILES += [Path("/etc/sudoers"), Path("/private/etc/sudoers"), Path("/private/etc/master.passwd")]
 
 BLOCKED_NAME_PATTERNS = [
-    re.compile(r"^\.env(\..*)?$"),  # .env, .env.local, ...
-    re.compile(r"^id_(rsa|dsa|ecdsa|ed25519)(_sk)?$"),  # private SSH keys
-    re.compile(r".*\.(pem|key|p12|pfx|kdbx)$", re.IGNORECASE),
+    re.compile(r"^\.env(\..*)?$", re.IGNORECASE),  # .env, .env.local, ...
+    re.compile(r"^id_(rsa|dsa|ecdsa|ed25519)(_sk)?$", re.IGNORECASE),  # private SSH keys
+    re.compile(r".*\.(pem|key|p12|pfx|kdbx|ppk)$", re.IGNORECASE),
     re.compile(r"^(credentials|secrets?)(\.\w+)?$", re.IGNORECASE),
 ]
 
@@ -76,15 +103,24 @@ def resolve(path_text: str, cwd: Path) -> Path:
     return p.resolve()
 
 
+def within(path: Path, folder: Path) -> bool:
+    """Is path the folder itself, or inside it? (Ignores case on Windows and macOS.)"""
+    if compat.CASE_INSENSITIVE_FS:
+        p = [part.lower() for part in path.parts]
+        f = [part.lower() for part in folder.parts]
+        return p[: len(f)] == f
+    return path == folder or path.is_relative_to(folder)
+
+
 def is_blocked(path: Path) -> bool:
     path = path.resolve()
     for d in BLOCKED_DIRS:
         try:
-            if path == d.resolve() or path.is_relative_to(d.resolve()):
+            if within(path, d.resolve()):
                 return True
         except OSError:
             continue
-    if any(path == f for f in BLOCKED_FILES):
+    if any(within(path, f) and len(path.parts) == len(f.parts) for f in BLOCKED_FILES):
         return True
     return any(pat.match(path.name) for pat in BLOCKED_NAME_PATTERNS)
 
@@ -94,7 +130,7 @@ def inside(path: Path, roots: list[Path] | None) -> bool:
     if roots is None:
         return True
     path = path.resolve()  # follow symlinks first, so a link can't lead outside
-    return any(path == r or path.is_relative_to(r) for r in roots)
+    return any(within(path, r) for r in roots)
 
 
 def _check(path: Path, roots: list[Path] | None = None) -> None:
@@ -243,15 +279,45 @@ class ApprovedCommand:
     arg_optional: bool = False
 
 
-APPROVED_COMMANDS: dict[str, ApprovedCommand] = {
-    c.name: c
-    for c in [
+def _ps(script: str) -> tuple[str, ...]:
+    """A fixed PowerShell one-liner (Windows). The model can never add to it."""
+    return ("powershell", "-NoProfile", "-NonInteractive", "-Command", script + " | Out-String -Width 200")
+
+
+_GIT = [
+    ApprovedCommand("git_status", "git status of the current directory", ("git", "status", "--short", "--branch")),
+    ApprovedCommand("git_log", "Last 20 commits of the current repo", ("git", "log", "--oneline", "-n", "20")),
+]
+
+
+def _linux_package_commands() -> list[ApprovedCommand]:
+    if shutil.which("pacman"):
+        return [
+            ApprovedCommand("package_info", "Installed package version (pacman -Q)", ("pacman", "-Q"), "package"),
+            ApprovedCommand("package_details", "Details of an installed package (pacman -Qi)", ("pacman", "-Qi"), "package"),
+        ]
+    if shutil.which("dpkg-query"):
+        return [
+            ApprovedCommand("package_info", "Installed package version (dpkg-query)", ("dpkg-query", "-W"), "package"),
+            ApprovedCommand("package_details", "Details of an installed package (dpkg -s)", ("dpkg", "-s"), "package"),
+        ]
+    if shutil.which("rpm"):
+        return [
+            ApprovedCommand("package_info", "Installed package version (rpm -q)", ("rpm", "-q"), "package"),
+            ApprovedCommand("package_details", "Details of an installed package (rpm -qi)", ("rpm", "-qi"), "package"),
+        ]
+    return []
+
+
+def _linux_commands() -> list[ApprovedCommand]:
+    return [
         ApprovedCommand("disk_usage", "Disk space per filesystem (df -h)", ("df", "-h")),
         ApprovedCommand("memory", "RAM and swap usage (free -h)", ("free", "-h")),
         ApprovedCommand("uptime", "Uptime and load average", ("uptime",)),
         ApprovedCommand("kernel", "Kernel and system info (uname -a)", ("uname", "-a")),
         ApprovedCommand("ip_addresses", "Network interfaces and addresses (ip addr)", ("ip", "addr")),
         ApprovedCommand("routes", "Routing table (ip route)", ("ip", "route")),
+        ApprovedCommand("listening_ports", "Ports programs are listening on (ss -tuln)", ("ss", "-tuln")),
         ApprovedCommand("block_devices", "Disks and partitions (lsblk)", ("lsblk", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS")),
         ApprovedCommand("processes", "Top processes by CPU", ("ps", "-eo", "pid,user,%cpu,%mem,comm", "--sort=-%cpu")),
         ApprovedCommand("failed_services", "systemd units that failed", ("systemctl", "--failed", "--no-pager")),
@@ -259,15 +325,75 @@ APPROVED_COMMANDS: dict[str, ApprovedCommand] = {
         ApprovedCommand("user_service_status", "Status of one systemd user service", ("systemctl", "--user", "status", "--no-pager"), "service"),
         ApprovedCommand("service_logs", "Last 100 journal lines for one service", ("journalctl", "--no-pager", "-n", "100", "-u"), "service"),
         ApprovedCommand("recent_errors", "Recent error-level journal messages from this boot", ("journalctl", "--no-pager", "-b", "-p", "err", "-n", "100")),
-        ApprovedCommand("package_info", "Installed pacman package version (pacman -Q)", ("pacman", "-Q"), "package"),
-        ApprovedCommand("package_details", "Details of an installed pacman package (pacman -Qi)", ("pacman", "-Qi"), "package"),
+        *_linux_package_commands(),
         ApprovedCommand("which", "Where a command lives on PATH", ("which",), "program"),
         ApprovedCommand("gpu_vulkan", "GPUs visible to Vulkan (vulkaninfo --summary)", ("vulkaninfo", "--summary")),
         ApprovedCommand("sensors", "Temperatures and fans (lm_sensors)", ("sensors",)),
-        ApprovedCommand("git_status", "git status of the current directory", ("git", "status", "--short", "--branch")),
-        ApprovedCommand("git_log", "Last 20 commits of the current repo", ("git", "log", "--oneline", "-n", "20")),
+        *_GIT,
     ]
-}
+
+
+def _macos_commands() -> list[ApprovedCommand]:
+    return [
+        ApprovedCommand("disk_usage", "Disk space per volume (df -h)", ("df", "-h")),
+        ApprovedCommand("memory", "Memory statistics (vm_stat)", ("vm_stat",)),
+        ApprovedCommand("uptime", "Uptime and load average", ("uptime",)),
+        ApprovedCommand("os_version", "macOS version (sw_vers)", ("sw_vers",)),
+        ApprovedCommand("kernel", "Kernel and system info (uname -a)", ("uname", "-a")),
+        ApprovedCommand("hardware", "Model, chip and memory (system_profiler)", ("system_profiler", "SPHardwareDataType")),
+        ApprovedCommand("gpu", "Graphics and displays (system_profiler)", ("system_profiler", "SPDisplaysDataType")),
+        ApprovedCommand("battery", "Battery and power state (pmset)", ("pmset", "-g", "batt")),
+        ApprovedCommand("ip_addresses", "Network interfaces and addresses (ifconfig)", ("ifconfig",)),
+        ApprovedCommand("routes", "Routing table (netstat -rn)", ("netstat", "-rn")),
+        ApprovedCommand("listening_ports", "Ports programs are listening on (lsof)", ("lsof", "-nP", "-iTCP", "-sTCP:LISTEN")),
+        ApprovedCommand("block_devices", "Disks and partitions (diskutil list)", ("diskutil", "list")),
+        ApprovedCommand("processes", "Top processes by CPU", ("ps", "-Ao", "pid,user,%cpu,%mem,comm", "-r")),
+        ApprovedCommand("services", "Background services (launchctl list)", ("launchctl", "list")),
+        ApprovedCommand("recent_errors", "Error messages from the system log, last 15 minutes",
+                        ("log", "show", "--last", "15m", "--style", "compact", "--predicate", "messageType == error")),
+        ApprovedCommand("package_info", "Installed Homebrew package version", ("brew", "list", "--versions"), "package"),
+        ApprovedCommand("which", "Where a command lives on PATH", ("which",), "program"),
+        *_GIT,
+    ]
+
+
+def _windows_commands() -> list[ApprovedCommand]:
+    return [
+        ApprovedCommand("disk_usage", "Free and used space per drive",
+                        _ps("Get-PSDrive -PSProvider FileSystem | Select-Object Name,@{n='UsedGB';e={[math]::Round($_.Used/1GB,1)}},@{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}},Root | Format-Table -AutoSize")),
+        ApprovedCommand("memory", "Total and free RAM",
+                        _ps("Get-CimInstance Win32_OperatingSystem | Select-Object @{n='TotalGB';e={[math]::Round($_.TotalVisibleMemorySize/1MB,1)}},@{n='FreeGB';e={[math]::Round($_.FreePhysicalMemory/1MB,1)}} | Format-List")),
+        ApprovedCommand("uptime", "When Windows last started",
+                        _ps("$b=(Get-CimInstance Win32_OperatingSystem).LastBootUpTime; 'Booted: ' + $b + '  (up ' + ((Get-Date)-$b).ToString('d\\.hh\\:mm') + ')'")),
+        ApprovedCommand("os_version", "Windows edition, version and build",
+                        _ps("Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,OSArchitecture | Format-List")),
+        ApprovedCommand("hardware", "Computer model, CPU and graphics",
+                        _ps("Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model | Format-List; Get-CimInstance Win32_Processor | Select-Object Name | Format-List; Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | Format-List")),
+        ApprovedCommand("ip_addresses", "Network adapters and addresses (ipconfig)", ("ipconfig",)),
+        ApprovedCommand("routes", "Routing table (route print)", ("route", "print")),
+        ApprovedCommand("listening_ports", "Ports programs are listening on (netstat)", ("netstat", "-an", "-p", "TCP")),
+        ApprovedCommand("processes", "Top processes by CPU time",
+                        _ps("Get-Process | Sort-Object CPU -Descending | Select-Object -First 25 Id,ProcessName,CPU,@{n='MemMB';e={[math]::Round($_.WorkingSet64/1MB)}} | Format-Table -AutoSize")),
+        ApprovedCommand("stopped_services", "Automatic services that aren't running",
+                        _ps("Get-Service | Where-Object {$_.StartType -eq 'Automatic' -and $_.Status -ne 'Running'} | Select-Object Name,DisplayName,Status | Format-Table -AutoSize")),
+        ApprovedCommand("service_status", "Status of one Windows service (sc query)", ("sc.exe", "query"), "service"),
+        ApprovedCommand("recent_errors", "Latest errors from the System event log",
+                        _ps("Get-WinEvent -FilterHashtable @{LogName='System'; Level=2} -MaxEvents 30 | Select-Object TimeCreated,ProviderName,Message | Format-List")),
+        ApprovedCommand("package_info", "Installed program version (winget list)", ("winget", "list", "--accept-source-agreements", "-q"), "package"),
+        ApprovedCommand("which", "Where a command lives on PATH (where)", ("where.exe",), "program"),
+        *_GIT,
+    ]
+
+
+def _approved() -> list[ApprovedCommand]:
+    if compat.WINDOWS:
+        return _windows_commands()
+    if compat.MACOS:
+        return _macos_commands()
+    return _linux_commands()
+
+
+APPROVED_COMMANDS: dict[str, ApprovedCommand] = {c.name: c for c in _approved()}
 
 
 def build_argv(name: str, argument: str | None) -> list[str]:
@@ -295,13 +421,16 @@ def run_command(name: str, argument: str | None, cwd: Path, limit: int, timeout:
     argv = build_argv(name, argument)
     if shutil.which(argv[0]) is None:
         raise ToolError(f"{argv[0]} is not installed on this system")
-    env = dict(os.environ, LC_ALL="C", SYSTEMD_COLORS="0", NO_COLOR="1", PAGER="cat")
+    env = dict(os.environ, SYSTEMD_COLORS="0", NO_COLOR="1", PAGER="cat")
+    if not compat.WINDOWS:
+        env["LC_ALL"] = "C"  # predictable English output
     try:
         proc = subprocess.run(
             argv,
             cwd=cwd,
             capture_output=True,
             text=True,
+            errors="replace",  # odd bytes (other code pages) never crash the tool
             timeout=timeout,
             shell=False,
             env=env,

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Callable
 
 from rich.text import Text
 
-from padou import doctor, sessions, tools, ui
+from padou import compat, doctor, sessions, tools, ui
 from padou.client import ServerError
 
 if TYPE_CHECKING:
@@ -196,14 +196,14 @@ def cmd_copy(app: "App", arg: str):
     if not app.last_reply:
         ui.info(app.theme, "Nothing to copy yet.")
         return
-    for tool, argv in (
-        ("wl-copy", ["wl-copy"]),
-        ("xclip", ["xclip", "-selection", "clipboard"]),
-        ("pbcopy", ["pbcopy"]),
-        ("clip.exe", ["clip.exe"]),  # Windows clipboard, reachable from WSL
-    ):
-        if shutil.which(tool):
-            subprocess.run(argv, input=app.last_reply, text=True, check=False)
+    for argv in compat.clipboard_commands():
+        if shutil.which(argv[0]):
+            if compat.program_name(argv[0]) == "clip":
+                # Windows' clip.exe reads UTF-16 when the text starts with a byte-order mark
+                data = ("\ufeff" + app.last_reply).encode("utf-16-le")
+            else:
+                data = app.last_reply.encode("utf-8")
+            subprocess.run(argv, input=data, check=False)
             ui.success(app.theme, f"Copied the last reply ({len(app.last_reply)} characters).")
             return
     ui.error(app.theme, "No clipboard tool found. Linux (Wayland): install wl-clipboard; X11: xclip")
@@ -223,10 +223,16 @@ def cmd_tools(app: "App", arg: str):
             rows.append([f"run: {c.name}", c.description + (f"  [{c.arg_name}]" if c.arg_name else "")])
     ui.table(app.theme, "Read-only tools", ["Tool", "What it does"], rows, styles=[app.theme.accent, ""])
     if app.write_roots:
-        rows.append(["edit_file", "Change one exact piece of text in a file (you approve it)"])
-        rows.append(["write_file", "Create a new file (you approve it)"])
-        ui.table(app.theme, "Write tools (write mode is on)", ["Tool", "What it does"], rows[-2:], styles=[app.theme.warn, ""])
-    ui.info(app.theme, "Blocked for safety: ~/.ssh, ~/.gnupg, keyrings, password stores, browser profiles, .env files, private keys.")
+        write_rows = [
+            ["edit_file", "Change one exact piece of text in a file"],
+            ["rewrite_file", "Replace a whole file (you see the full diff)"],
+            ["write_file", "Create a new file, and any missing folders"],
+            ["move_path", "Move or rename a file or folder (never overwrites)"],
+            ["delete_path", "Move a file or folder to the Trash (folders: you type the name)"],
+        ]
+        ui.table(app.theme, "Write tools (write mode is on; you approve every change)", ["Tool", "What it does"], write_rows,
+                 styles=[app.theme.warn, ""])
+    ui.info(app.theme, "Blocked for safety: SSH and GPG keys, keychains and credential stores, password stores, browser profiles, .env files, private keys.")
 
 
 def cmd_resume(app: "App", arg: str):
@@ -388,8 +394,9 @@ def cmd_write(app: "App", arg: str):
     app.refresh_system_prompt()
     ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Write mode on for ", "bold"), (ui.short_path(folder), f"bold {th.warn}"),
                                    (" (and its subfolders), this session only.", "")))
-    ui.info(th, "padou can edit existing text files and create new ones there. It can't delete, rename or run anything.")
-    ui.info(th, "You'll see every change as a diff and approve it. Backups are kept: /undo, /changes. Stop with /write off.")
+    ui.info(th, "padou can edit, create, move and delete (to the Trash) files there. It can't run anything.")
+    ui.info(th, "Every change is shown in a box first and needs your yes (deleting a folder: you type its name).")
+    ui.info(th, "Backups are kept: /undo, /changes. Stop with /write off.")
 
 
 def cmd_undo(app: "App", arg: str):
@@ -406,7 +413,7 @@ def cmd_undo(app: "App", arg: str):
         ui.error(app.theme, str(exc))
         return
     ui.success(app.theme, f"Undone: {msg}")
-    app.session.messages.append({"role": "user", "content": f"(note: I undid your change to {last.change.path}; it's back as it was)"})
+    app.session.messages.append({"role": "user", "content": f"(note: I undid your last change ({last.change.kind} {last.change.path}); it's back as it was)"})
     app.session.messages.append({"role": "assistant", "content": "Understood."})
 
 
@@ -416,11 +423,10 @@ def cmd_changes(app: "App", arg: str):
         return
     rows = []
     for i, a in enumerate(app.changes, 1):
-        added, removed = a.change.stats
-        state = Text("undone", style=app.theme.dim) if a.undone else Text("applied", style=app.theme.ok)
-        rows.append([str(i), a.when, "edited" if a.change.kind == "edit" else "created", ui.short_path(a.change.path), f"+{added} −{removed}", state])
-    ui.table(app.theme, "Changes this session", ["#", "Time", "What", "File", "Lines", ""], rows,
-             styles=[app.theme.dim, app.theme.dim, "", "bold", app.theme.dim, ""])
+        state = Text("undone", style=app.theme.dim) if a.undone else Text("done", style=app.theme.ok)
+        rows.append([str(i), a.when, ui.short_path(a.change.path), a.change.summary(), state])
+    ui.table(app.theme, "Changes this session", ["#", "Time", "File or folder", "What happened", ""], rows,
+             styles=[app.theme.dim, app.theme.dim, "bold", "", ""])
     ui.info(app.theme, f"Backups: {ui.short_path(writes_backup_dir(app))}  ·  /undo reverts the last one")
 
 
@@ -463,7 +469,7 @@ def cmd_server(app: "App", arg: str):
             stopped = server.stop(procs)
             ui.success(th, f"Stopped the model server (pid {', '.join(map(str, stopped)) or '?'}).")
         elif action == "stop":
-            ui.info(th, "No model server process found for this user. If it runs as a service: sudo systemctl stop <name>")
+            ui.info(th, "No model server process found for this user. If it runs as a system service, stop it there.")
             return
         if action == "stop":
             return
@@ -490,6 +496,55 @@ def cmd_system(app: "App", arg: str):
     ui.markdown("```text\n" + app.session.messages[0]["content"] + "\n```")
 
 
+def cmd_update(app: "App", arg: str):
+    from padou import __version__, updates
+
+    th = app.theme
+    install = updates.detect_install()
+    with ui.ReplyView(th, "checking GitHub for a newer padou…"):
+        release = updates.check_now()
+    newer = release is not None and updates.is_newer(release.version)
+    app.update_available = release if newer else None
+
+    if install.kind == "git":
+        ui.info(th, f"padou runs from your git clone at {ui.short_path(install.folder)}; /update pulls the latest code there.")
+        if newer:
+            ui.success(th, f"padou {release.version} has been released (you have {__version__}).")
+    elif release is None:
+        ui.error(th, "Couldn't ask GitHub about new versions (offline, or no releases published yet).")
+        return
+    elif not newer:
+        ui.success(th, f"You have the latest padou ({__version__}).")
+        return
+    else:
+        ui.console.print(Text.assemble(("⬆ ", f"bold {th.accent}"), (f"padou {__version__} → {release.version}", "bold")))
+    if newer and release.notes.strip():
+        notes = release.notes.strip().splitlines()
+        ui.markdown("\n".join(notes[:25]) + ("\n\n…" if len(notes) > 25 else ""))
+    if newer and release.url:
+        ui.info(th, release.url)
+
+    if install.kind == "other":
+        ui.info(th, "padou wasn't installed with uv, so update it the way you installed it, for example:")
+        ui.console.print(Text(f"  pip install --upgrade {updates.git_tool_spec(release)}", style="bold"))
+        return
+    if not ui.confirm("Update now?", default=True):
+        return
+    with ui.ReplyView(th, "updating…"):
+        outcome = updates.update_git_clone(install.folder) if install.kind == "git" else updates.update_uv_tool(release)
+    if not outcome.ok:
+        ui.error(th, outcome.message)
+        return
+    ui.success(th, outcome.message)
+    app.update_available = None
+    if outcome.after_exit:
+        app.after_exit = outcome.after_exit
+        ui.info(th, "Quit padou (/exit) to finish the update.")
+        return
+    if outcome.restart and ui.confirm("Quit now, so the next start uses the new version?", default=True):
+        return EXIT
+
+
 COMMANDS: dict[str, Command] = {
     "help": Command(cmd_help, "Show commands and keys"),
     "clear": Command(cmd_clear, "Start a fresh conversation"),
@@ -499,9 +554,10 @@ COMMANDS: dict[str, Command] = {
     "tools": Command(cmd_tools, "List the tools padou may use"),
     "folder": Command(cmd_folder, "Folders padou may read: list, add, remove", "[add <path>]"),
     "write": Command(cmd_write, "Let padou change files in one folder (you approve each change)", "[<folder>|off]"),
-    "undo": Command(cmd_undo, "Undo padou's last file change"),
-    "changes": Command(cmd_changes, "List the files padou changed this session"),
+    "undo": Command(cmd_undo, "Undo padou's last change (edit, new file, move or delete)"),
+    "changes": Command(cmd_changes, "List everything padou changed this session"),
     "server": Command(cmd_server, "Model server: status, stop, restart, log", "[stop|restart|log]"),
+    "update": Command(cmd_update, "Check for a newer padou and install it"),
     "resume": Command(cmd_resume, "List saved sessions, or continue one", "[n]"),
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),

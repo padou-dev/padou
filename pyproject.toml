@@ -10,12 +10,16 @@ requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
     "prompt-toolkit>=3.0.43",
+    "psutil>=5.9",
     "rich>=13.7",
+    "send2trash>=1.8.2",
 ]
 keywords = ["ai", "assistant", "cli", "llama.cpp", "local-llm", "terminal"]
 classifiers = [
     "Environment :: Console",
     "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
 ]
 

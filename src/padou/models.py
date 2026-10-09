@@ -9,13 +9,12 @@ pulled. Any other server: padou just asks it for a different model name.
 from __future__ import annotations
 
 import os
-import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
 
-from padou import detect, server
+from padou import compat, detect, server
 from padou.config import ServerConfig
 
 HF_FLAGS = ("-hf", "--hf-repo")
@@ -40,10 +39,10 @@ class Entry:
 def kind(cfg: ServerConfig) -> str:
     """"llama.cpp" if padou manages a local llama-server, "ollama", or "other"."""
     try:
-        argv = shlex.split(cfg.start_command)
+        argv = compat.split_command(cfg.start_command)
     except ValueError:
         argv = []
-    program = os.path.basename(argv[0]) if argv else ""
+    program = compat.program_name(argv[0]) if argv else ""
     if not server.is_local(cfg.url):
         return "other"
     if program == "ollama" or ":11434" in cfg.url:
@@ -55,7 +54,7 @@ def kind(cfg: ServerConfig) -> str:
 
 def current_hf(cfg: ServerConfig) -> str:
     try:
-        argv = shlex.split(cfg.start_command)
+        argv = compat.split_command(cfg.start_command)
     except ValueError:
         return ""
     for i, a in enumerate(argv):
@@ -66,14 +65,14 @@ def current_hf(cfg: ServerConfig) -> str:
 
 def with_model(start_command: str, hf: str) -> str:
     """The same start command, with its -hf model swapped."""
-    argv = shlex.split(start_command)
+    argv = compat.split_command(start_command)
     for i, a in enumerate(argv):
         if a in HF_FLAGS and i + 1 < len(argv):
             argv[i + 1] = hf
             break
     else:
         argv[1:1] = ["-hf", hf]
-    return shlex.join(argv)
+    return compat.join_command(argv)
 
 
 # --------------------------------------------------------------------------- #
@@ -81,10 +80,21 @@ def with_model(start_command: str, hf: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def _cache_dirs() -> list[Path]:
+def _llama_cache() -> Path:
+    """llama.cpp's own download folder, the same way llama.cpp works it out."""
+    if os.environ.get("LLAMA_CACHE"):
+        return Path(os.environ["LLAMA_CACHE"])
     home = Path.home()
-    hf_home = Path(os.environ.get("HF_HOME", home / ".cache/huggingface"))
-    dirs = [Path(os.environ.get("HF_HUB_CACHE", hf_home / "hub")), Path(os.environ.get("LLAMA_CACHE", home / ".cache/llama.cpp"))]
+    if compat.WINDOWS:
+        return Path(os.environ.get("LOCALAPPDATA", home / "AppData/Local")) / "llama.cpp"
+    if compat.MACOS:
+        return home / "Library/Caches/llama.cpp"
+    return Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "llama.cpp"
+
+
+def _cache_dirs() -> list[Path]:
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache/huggingface"))
+    dirs = [Path(os.environ.get("HF_HUB_CACHE", hf_home / "hub")), _llama_cache()]
     return [d for d in dirs if d.is_dir()]
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from padou import __version__, brand, config, detect, doctor, paths, server, sessions, theme, ui
+from padou import __version__, brand, config, detect, doctor, paths, server, sessions, theme, ui, updates
 from padou import setup as setup_wizard
 from padou.app import App
 from padou.client import Client
@@ -24,19 +24,20 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--url", help="model server URL (overrides the config)")
     p.add_argument("--model", help="model name to request (overrides the config)")
     p.add_argument("--config", type=Path, help="use a different config file")
-    p.add_argument("--init-config", action="store_true", help="write an example config to ~/.config/padou/config.toml")
+    p.add_argument("--init-config", action="store_true", help="write an example config file (see padou doctor for where)")
     return p.parse_args(argv)
 
 
-NOTICE_FILE = paths.DATA_DIR / "notice-v2-accepted"  # bump the version when the notice changes
+NOTICE_FILE = paths.DATA_DIR / "notice-v3-accepted"  # bump the version when the notice changes
 
 NOTICE = """padou is free, open-source software provided AS IS, without warranty of any kind.
 
 • AI answers can be wrong, even when they sound confident. Review every
   command before you run it: you are responsible for what you run.
 • Don't rely on padou for medical, legal, financial or safety decisions.
-• padou is read-only unless you turn on write mode (/write). You
-  approve every file change, and each one is your responsibility.
+• padou is read-only unless you turn on write mode (/write). There it
+  can edit, move and delete files (to the Trash), only with your
+  approval, and each change you approve is your responsibility.
 • Its safety limits are safeguards, not guarantees.
 • Models and model servers are third-party software with their own licences.
 
@@ -143,6 +144,13 @@ def main(argv=None) -> int:
                     for line in server.tail_log(4).splitlines():
                         notes.append(("info", "  " + line[:110]))
             return up, detail
+
+        if updates.enabled(cfg):
+            known = updates.cached_update()
+            if known:
+                app.update_available = known
+                notes.append(("ok", f"padou {known.version} is available (you have {__version__}). Type /update to get it."))
+            updates.check_in_background(lambda release: setattr(app, "update_available", release))
 
         status = {"text": ""}
         if cfg.ui.clear_on_start:

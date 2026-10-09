@@ -4,7 +4,7 @@
 # Read it before running it: it's short on purpose.
 set -euo pipefail
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" 2>/dev/null || true
 
 say()  { printf '\033[1;35m::\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
@@ -14,6 +14,8 @@ if ! command -v uv >/dev/null 2>&1; then
     warn "uv is not installed."
     if command -v pacman >/dev/null 2>&1; then
         say "Install it with: sudo pacman -S uv   (then run this script again)"
+    elif command -v brew >/dev/null 2>&1; then
+        say "Install it with: brew install uv   (then run this script again)"
     else
         say "See https://docs.astral.sh/uv/getting-started/installation/"
     fi
@@ -21,11 +23,16 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 # 2. padou itself, in its own isolated environment
-say "Installing padou with uv tool install..."
-uv tool install --force --reinstall .
+if [ -f pyproject.toml ]; then
+    say "Installing padou from this folder..."
+    uv tool install --force --reinstall .
+else
+    say "Installing padou from GitHub..."
+    uv tool install --force "git+https://github.com/padou-dev/padou"
+fi
 
 # 3. the setup wizard: picks a server and model, writes the config
-if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/padou/config.toml" ]; then
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/padou/config.toml" ]; then  # same place on Linux and macOS
     say "Keeping your existing config (re-run the wizard any time: padou setup)."
 else
     "$(uv tool dir --bin)/padou" setup || true   # full path: ~/.local/bin may not be on PATH yet

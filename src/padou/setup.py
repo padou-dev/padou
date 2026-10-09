@@ -125,7 +125,7 @@ def run(theme: Theme, auto: bool = False) -> bool:
             ui.console.print(Text(w, style=theme.warn))
         srv = ServerConfig(url=llama.url, model=model.hf, model_label=model.label, autostart=True, start_command=command)
         if llama.running and llama.models and model.hf not in llama.models:
-            ui.info(theme, f"Note: llama-server is already running another model ({llama.models[0]}). Restart it to switch: pkill -f llama-server")
+            ui.info(theme, f"Note: llama-server is already running another model ({llama.models[0]}). Restart it to switch: /server restart")
         _write(theme, srv)
         _start_now(theme, srv, model, auto)
         return True

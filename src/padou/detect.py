@@ -14,6 +14,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
+import psutil
+
+from padou import compat
 
 # --------------------------------------------------------------------------- #
 # Models padou offers
@@ -80,7 +83,7 @@ class GPU:
 
 @dataclass
 class System:
-    os_family: str  # "arch", "debian", "fedora", "suse", "macos", "linux", "other"
+    os_family: str  # "arch", "debian", "fedora", "suse", "macos", "windows", "linux", "other"
     os_name: str
     ram_gb: float
     gpu: GPU
@@ -108,16 +111,9 @@ def parse_os_release(text: str) -> tuple[str, str]:
 
 def _ram_gb() -> float:
     try:
-        for line in Path("/proc/meminfo").read_text().splitlines():
-            if line.startswith("MemTotal:"):
-                return int(line.split()[1]) / 1024 / 1024
-    except OSError:
-        pass
-    if platform.system() == "Darwin":
-        out = _run(["sysctl", "-n", "hw.memsize"])
-        if out.strip().isdigit():
-            return int(out) / 1024**3
-    return 0.0
+        return psutil.virtual_memory().total / 1024**3
+    except Exception:  # psutil can't read it here (rare): report "unknown"
+        return 0.0
 
 
 def _run(argv: list[str], timeout: float = 10) -> str:
@@ -133,8 +129,31 @@ def _run(argv: list[str], timeout: float = 10) -> str:
 PCI_VENDORS = {"0x10de": "nvidia", "0x1002": "amd", "0x8086": "intel"}
 
 
+def _windows_gpu() -> GPU:
+    """The best graphics adapter Windows reports (NVIDIA was already checked by nvidia-smi)."""
+    out = _run(["powershell", "-NoProfile", "-Command",
+                "Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name + '|' + $_.AdapterRAM }"])
+    best: GPU | None = None
+    for line in out.splitlines():
+        if "|" not in line:
+            continue
+        name, ram = line.rsplit("|", 1)
+        low = name.lower()
+        vendor = "amd" if ("amd" in low or "radeon" in low) else "intel" if "intel" in low else "nvidia" if "nvidia" in low else None
+        if vendor is None:
+            continue
+        vram = int(ram) / 1024**3 if ram.strip().isdigit() else None  # capped at 4 GB by Windows; a hint only
+        integrated = vendor == "intel" or ("graphics" in low and "rx" not in low)
+        gpu = GPU(vendor, name.strip()[:70], None, integrated)
+        if vram and vram >= 2 and not integrated:
+            gpu.vram_gb = round(vram, 1)
+        if best is None or (best.integrated and not gpu.integrated):
+            best = gpu
+    return best or GPU("none")
+
+
 def detect_gpu() -> GPU:
-    if platform.system() == "Darwin":
+    if compat.MACOS:
         return GPU("apple", "Apple GPU (Metal)", integrated=True) if platform.machine() == "arm64" else GPU("none")
 
     smi = _run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"])
@@ -144,6 +163,9 @@ def detect_gpu() -> GPU:
             return GPU("nvidia", name.strip(), round(float(mem) / 1024, 1))
         except ValueError:
             return GPU("nvidia", name.strip())
+
+    if compat.WINDOWS:
+        return _windows_gpu()
 
     best: GPU | None = None
     for card in sorted(Path("/sys/class/drm").glob("card[0-9]")):
@@ -172,9 +194,11 @@ def detect_gpu() -> GPU:
 
 
 def detect_system() -> System:
-    if platform.system() == "Darwin":
+    if compat.MACOS:
         family, name = "macos", f"macOS {platform.mac_ver()[0]}"
-    elif platform.system() == "Linux":
+    elif compat.WINDOWS:
+        family, name = "windows", f"Windows {platform.release()}"
+    elif compat.LINUX:
         try:
             family, name = parse_os_release(Path("/etc/os-release").read_text())
         except OSError:
@@ -304,7 +328,10 @@ def install_hints(system: System) -> list[tuple[str, str]]:
             hints.append(("llama.cpp, CUDA build (AUR): pick the -cuda package from", "yay -Ss llama.cpp"))
         else:
             hints.append(("llama.cpp (AUR): pick a package from", "yay -Ss llama.cpp"))
-    if fam == "macos":
+    if fam == "windows":
+        hints.append(("llama.cpp (Windows Package Manager)", "winget install llama.cpp"))
+        hints.append(("llama.cpp prebuilt binaries (pick cuda, vulkan or cpu)", "https://github.com/ggml-org/llama.cpp/releases"))
+    elif fam == "macos":
         hints.append(("llama.cpp with Metal (Homebrew)", "brew install llama.cpp"))
     elif fam != "arch":
         hints.append(("llama.cpp (Homebrew on Linux)", "brew install llama.cpp"))
@@ -313,6 +340,8 @@ def install_hints(system: System) -> list[tuple[str, str]]:
         hints.append(("llama.cpp prebuilt binaries", "https://github.com/ggml-org/llama.cpp/releases"))
     if fam == "macos":
         hints.append(("Ollama (easiest alternative)", "brew install ollama"))
+    elif fam == "windows":
+        hints.append(("Ollama (easiest alternative)", "winget install Ollama.Ollama"))
     else:
         hints.append(("Ollama (easiest alternative)", "curl -fsSL https://ollama.com/install.sh | sh"))
     return hints
