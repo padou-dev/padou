@@ -73,5 +73,23 @@ def clipboard_commands() -> list[list[str]]:
     return [["wl-copy"], ["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"], ["clip.exe"]]
 
 
+def utf8_output(*streams) -> None:
+    """Make printing never crash on characters the console's code page lacks.
+
+    When Windows output goes to a pipe or a file (GitHub Actions, `padou > log`),
+    Python uses the old code page (often cp1252), which has no Greek letters or
+    box-drawing characters. Switch those streams to UTF-8; anything a stream
+    still can't take becomes "?" instead of an error.
+    """
+    for stream in streams or (sys.stdout, sys.stderr):
+        try:
+            if WINDOWS and (stream.encoding or "").lower().replace("-", "") != "utf8":
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            elif stream.errors == "strict":
+                stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass  # not a normal text stream (tests, IDEs): leave it alone
+
+
 def same_path(a: str, b: str) -> bool:
     return a.lower() == b.lower() if CASE_INSENSITIVE_FS else a == b

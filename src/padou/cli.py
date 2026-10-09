@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from padou import __version__, brand, config, detect, doctor, paths, server, sessions, theme, ui, updates
+from padou import __version__, brand, compat, config, detect, doctor, paths, server, sessions, theme, ui, updates
 from padou import setup as setup_wizard
 from padou.app import App
 from padou.client import Client
@@ -68,6 +68,7 @@ def _accept_notice() -> bool:
 
 
 def main(argv=None) -> int:
+    compat.utf8_output()  # before anything prints (even --version)
     args = parse_args(argv)
 
     if args.init_config:

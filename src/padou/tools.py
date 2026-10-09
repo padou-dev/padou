@@ -349,6 +349,7 @@ def _macos_commands() -> list[ApprovedCommand]:
         ApprovedCommand("block_devices", "Disks and partitions (diskutil list)", ("diskutil", "list")),
         ApprovedCommand("processes", "Top processes by CPU", ("ps", "-Ao", "pid,user,%cpu,%mem,comm", "-r")),
         ApprovedCommand("services", "Background services (launchctl list)", ("launchctl", "list")),
+        ApprovedCommand("service_status", "Status of one launchd service, by label (launchctl list)", ("launchctl", "list"), "service"),
         ApprovedCommand("recent_errors", "Error messages from the system log, last 15 minutes",
                         ("log", "show", "--last", "15m", "--style", "compact", "--predicate", "messageType == error")),
         ApprovedCommand("package_info", "Installed Homebrew package version", ("brew", "list", "--versions"), "package"),
