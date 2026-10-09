@@ -16,7 +16,7 @@ def test_program_name():
 def test_utf8_output_never_crashes_on_greek(monkeypatch):
     """Like Windows output going to a pipe: a cp1252 stream can't hold παντού."""
     raw = io.BytesIO()
-    stream = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+    stream = io.TextIOWrapper(raw, encoding="cp1252", errors="strict", newline="\n")
     monkeypatch.setattr(compat, "WINDOWS", True)
     compat.utf8_output(stream)
     stream.write("padou 0.1.0 · παντού\n")
