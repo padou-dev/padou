@@ -305,6 +305,8 @@ class App:
         if self.write_roots:
             names = ", ".join(ui.short_path(r) for r in self.write_roots)
             out.append(("class:tb.warn", f"· ✎ write: {names} "))
+        else:
+            out.append(("class:tb", "· read-only "))
         if self.update_available is not None:
             out.append(("class:tb.accent", f"· ⬆ {self.update_available.version} available: /update "))
         return out

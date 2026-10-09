@@ -81,7 +81,7 @@ class Banner:
         self.c = colors
         if len(path_text) > 48:
             path_text = "…" + path_text[-47:]  # keep the end of a long path, where the folder name is
-        self.lines = [f"{model_label[:40]} · local · read-only", path_text]
+        self.lines = [f"{model_label[:40]} · local", path_text]
         self.version = version
         self.width = TEXT_COL + max(len(LATIN) + len(version) + 12, *(len(x) for x in self.lines)) + 1
         self.rnd = random.Random(seed)

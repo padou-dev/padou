@@ -23,3 +23,16 @@ def test_short_commands_keep_their_real_title(monkeypatch):
     monkeypatch.setattr(compat, "WINDOWS", True)
     monkeypatch.setattr(tools, "run_command", lambda *a, **k: "$ ipconfig\nWindows IP Configuration")
     assert tools.execute("run_command", {"name": "ip_addresses"}, Path.cwd(), 10000, 10).title == "Run ipconfig"
+
+
+def test_status_line_shows_the_current_mode(tmp_path):
+    from types import SimpleNamespace
+
+    a = object.__new__(app.App)
+    a.last_speed, a.ctx_used, a.ctx_size, a.model_label = 0, 0, 0, "Qwen3.5 9B"
+    a.cfg = SimpleNamespace(ui=SimpleNamespace(animation=False))
+    a.update_available, a.write_roots = None, []
+    assert "read-only" in "".join(t for _, t in a._toolbar())
+    a.write_roots = [tmp_path]
+    bar = "".join(t for _, t in a._toolbar())
+    assert "✎ write:" in bar and "read-only" not in bar

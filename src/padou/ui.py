@@ -84,7 +84,7 @@ def frame_to_ptk(frame) -> list[tuple[str, str]]:
 def compact_banner(theme: Theme, model_label: str) -> Text:
     return Text.assemble(
         ("✦ ", f"bold {theme.accent}"), (f"padou v{__version__}", "bold"), (" · παντού", theme.dim),
-        ("  ", ""), (f"{model_label} · local · read-only", theme.dim),
+        ("  ", ""), (f"{model_label} · local", theme.dim),
     )
 
 

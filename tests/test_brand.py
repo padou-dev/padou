@@ -16,7 +16,8 @@ def test_still_has_full_star_and_text():
     assert len(rows) == brand.ROWS
     assert "◆" in rows[brand.CR]
     assert "padou  v0.1.0 · παντού" in rows[2]
-    assert "Qwen3.5 4B · local · read-only" in rows[3]
+    assert "Qwen3.5 4B · local" in rows[3]
+    assert "read-only" not in "".join(rows)  # the mode can change, so it lives in the status line
     assert rows[0].strip() == "│" and rows[6].strip() == "│"
 
 
