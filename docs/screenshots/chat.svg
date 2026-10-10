@@ -15,7 +15,7 @@
 <text x="22.0" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
 <text x="81.0" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">◆</text>
 <text x="97.9" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
-<text x="182.2" y="108" fill="#7f849c" textLength="252.9" lengthAdjust="spacingAndGlyphs">Qwen3.5 4B · local · read-only</text>
+<text x="182.2" y="108" fill="#7f849c" textLength="151.7" lengthAdjust="spacingAndGlyphs">Qwen3.5 4B · local</text>
 <text x="64.2" y="125" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╱</text>
 <rect x="84.6" y="112" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="97.9" y="125" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╲</text>
@@ -57,5 +57,5 @@
 <text x="22.0" y="567" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
 <text x="38.9" y="567" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▏</text>
 <text x="22.0" y="584" fill="#ff5fa2" textLength="109.6" lengthAdjust="spacingAndGlyphs"> ✦ Qwen3.5 4B</text>
-<text x="131.6" y="584" fill="#7f849c" textLength="354.1" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 1342/8192 (16%) · /help </text>
+<text x="131.6" y="584" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 1342/8192 (16%) · /help · read-only </text>
 </g></svg>

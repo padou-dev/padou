@@ -218,6 +218,10 @@ padou is **read-only by default**. To let it change files, turn on write mode fo
 /write off                    read-only again
 ```
 
+<p align="center"><img src="docs/screenshots/write.svg" alt="padou in write mode: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
+
+The status line at the bottom always shows the mode: `read-only`, or `✎ write:` and the folder.
+
 What padou can do there, each one only after you approve it:
 
 | Tool | What it does |

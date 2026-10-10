@@ -300,7 +300,7 @@ def _diff_lines(theme: Theme, change, max_lines: int) -> list[Text]:
 
 def show_change(theme: Theme, change, max_lines: int = 80) -> None:
     """A proposed change, in a box: what will happen, and exactly to what."""
-    from padou.writes import human_size
+    from padou.writes import _count, human_size
 
     icon, verb = _VERBS.get(change.kind, ("•", change.kind.title()))
     body: list = []
@@ -309,7 +309,7 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
         body.append(Text.assemble(("to    ", theme.dim), (short_path(change.dest), "bold")))
     elif change.kind == "delete":
         if change.is_dir:
-            body.append(Text.assemble(("Folder with ", ""), (f"{change.files} files and {change.folders} folders", "bold"),
+            body.append(Text.assemble(("Folder with ", ""), (_count(change.files, change.folders), "bold"),
                                       (f" ({human_size(change.size)})", theme.dim)))
             try:
                 entries = sorted(change.path.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
