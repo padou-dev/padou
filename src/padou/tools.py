@@ -313,6 +313,8 @@ def _ps(script: str) -> tuple[str, ...]:
 _GIT = [
     ApprovedCommand("git_status", "git status of the current directory", ("git", "status", "--short", "--branch")),
     ApprovedCommand("git_log", "Last 20 commits of the current repo", ("git", "log", "--oneline", "-n", "20")),
+    ApprovedCommand("git_diff", "Uncommitted changes in the current repo (git diff)", ("git", "--no-pager", "diff", "--no-color")),
+    ApprovedCommand("git_diff_staged", "Changes staged for the next commit", ("git", "--no-pager", "diff", "--staged", "--no-color")),
 ]
 
 

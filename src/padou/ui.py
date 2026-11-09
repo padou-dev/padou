@@ -478,7 +478,51 @@ def ask_approval(theme: Theme, change) -> bool:
                 console.print(Text(f"  That didn't match the {what}'s name.", style=theme.dim))
             return False
         return True
-    return confirm("  Apply this change?", default=False)
+    editor = compat.code_editor() if change.kind in ("edit", "rewrite", "create") else None
+    if editor is None:
+        return confirm("  Apply this change?", default=False)
+    while True:
+        answer = choose(theme, "  Apply this change?", {"y": "yes", "n": "no", "d": "view diff in your editor"}, "n")
+        if answer != "d":
+            return answer == "y"
+        if open_diff(editor, change):
+            console.print(Text(f"  Opened the diff in {editor}.", style=theme.dim))
+        else:
+            console.print(Text(f"  Couldn't start {editor}.", style=theme.dim))
+
+
+def open_diff(editor: str, change) -> bool:
+    """Show the change side by side in VS Code / Code OSS / VSCodium (`--diff`)."""
+    import subprocess
+    import tempfile
+
+    folder = Path(tempfile.mkdtemp(prefix="padou-diff-"))
+    name = change.path.name
+    before, after = folder / f"current - {name}", folder / f"proposed - {name}"
+    before.write_bytes(change.old.encode("utf-8"))
+    after.write_bytes(change.new.encode("utf-8"))
+    try:
+        subprocess.Popen([editor, "--diff", str(before), str(after)], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **compat.detached_process_options())
+        return True
+    except OSError:
+        return False
+
+
+def choose(theme: Theme, question: str, options: dict[str, str], default: str) -> str:
+    """Ask for one letter out of `options` ({"y": "yes", ...}); Enter means `default`."""
+    keys = "/".join(options)
+    legend = ", ".join(f"{k} = {v}" for k, v in options.items() if v not in ("yes", "no"))
+    prompt = Text.assemble((question + " ", ""), (f"[{keys}]", f"bold {theme.accent}"), (f" ({default})", theme.accent),
+                           ((f"  {legend}" if legend else ""), theme.dim), (": ", ""))
+    while True:
+        try:
+            answer = console.input(prompt).strip().lower()[:1] or default
+        except (KeyboardInterrupt, EOFError):
+            console.print()
+            return default
+        if answer in options:
+            return answer
 
 
 def confirm(question: str, default: bool = False) -> bool:

@@ -11,7 +11,9 @@ Faster on laptops, a new admin mode, optional web search, and more reliable answ
 - Long tool output keeps its start and end, with a note about what was skipped
 - Auto-compact: near a full context, older messages are summarised automatically and the last exchange is kept (`auto_compact` under `[chat]`)
 - A quiet speed line under each answer: `3.1s · 140 tokens · 22 tok/s` (`reply_stats` under `[ui]`)
-- `padou bench`: score the current model on 15 fixed questions in a practice folder, saved for comparison
+- `padou bench`: score the current model on 17 fixed questions (two about code) in a practice folder, saved for comparison
+- Coding mode, when padou starts in a project: `@path` attaches a file (Tab completes it); the project's own test, lint and build commands can be run by the model in edit/admin mode after you approve (or allow them for the session); `/review` reviews uncommitted git changes; `d` in the confirmation box opens the change as a diff in VS Code / Code OSS / VSCodium; `/tutor` explains and hints instead of writing the code; `git_diff` and `git_diff_staged` commands
+- `/exit && stop` (or `/exit stop`) quits and stops the model server
 - `/help` in groups; `/undo list` (also `/changes`); `/tools`, `/system` and `/screenshot` still work but are no longer listed
 
 - `/mode read | edit | admin` replaces `/write` (which still works, as the old name of `/mode edit`). `Shift+Tab` switches between read-only and edit, quietly: the status line shows the mode

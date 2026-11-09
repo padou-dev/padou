@@ -193,6 +193,11 @@ def main(argv=None) -> int:
                                        "from your config. /server restart switches it."))
         elif detail != "still starting":
             notes.append(("error", f"Model server not ready ({detail}). Start it, then just type; /doctor explains."))
+        if app.project is not None:
+            p = app.project
+            runs = f" · can run its {', '.join(p.commands)}" if p.commands else ""
+            notes.append(("info", f"Coding project: {' + '.join(p.kinds) or 'files'} · {p.name}{' · git' if p.git else ''}{runs}. "
+                                  "Attach files with @path · /review · /tutor"))
         notes.append(("info", "Type a message, or /help for commands."))
 
         if args.resume_last:

@@ -177,8 +177,10 @@ padou --version
 | `/compact` | Summarise the conversation to free up context |
 | `/think [on\|off]` | Let the model reason before answering: smarter on hard questions, much slower (this session) |
 | `/web [on\|off]` | Let padou search the web, this session only (off by default; see [Web search](#web-search)) |
+| `/review [focus]` | Review your uncommitted git changes, bugs first (see [Coding](#coding)) |
+| `/tutor [on\|off]` | Tutor mode: padou explains and gives hints instead of writing the code for you |
 | `/doctor` | Run the checks from inside padou |
-| `/exit`, `/quit` | Quit (also `Ctrl+D`, or `Ctrl+C` twice) |
+| `/exit`, `/quit` | Quit (also `Ctrl+D`, or `Ctrl+C` twice). `/exit && stop` also stops the model server |
 
 `/help` shows these in groups. A few more work when typed, but stay out of the way: `/tools` (every tool padou may use), `/changes` (same as `/undo list`), `/system` (the system prompt) and `/screenshot [name]` (save the screen as an SVG in `~/Pictures/padou/`).
 
@@ -341,7 +343,7 @@ Approved commands, per system (type `/tools` to see yours):
 | **Linux** | `disk_usage`, `memory`, `uptime`, `kernel`, `ip_addresses`, `routes`, `listening_ports`, `block_devices`, `processes`, `failed_services`, `service_status <service>`, `user_service_status <service>`, `service_logs <service>`, `recent_errors`, `package_info <package>` and `package_details <package>` (pacman, dpkg or rpm, whichever you have), `which <program>`, `gpu_vulkan`, `sensors` |
 | **macOS** | `disk_usage`, `memory`, `uptime`, `os_version`, `kernel`, `hardware`, `gpu`, `battery`, `ip_addresses`, `routes`, `listening_ports`, `block_devices`, `processes`, `services`, `recent_errors`, `package_info <package>` (Homebrew), `which <program>` |
 | **Windows** | `disk_usage`, `memory`, `uptime`, `os_version`, `hardware`, `ip_addresses`, `routes`, `listening_ports`, `processes`, `stopped_services`, `service_status <service>`, `recent_errors`, `package_info <package>` (winget), `which <program>` |
-| **All** | `git_status`, `git_log` |
+| **All** | `git_status`, `git_log`, `git_diff`, `git_diff_staged` |
 
 On Windows a few of these are short, fixed PowerShell one-liners written into padou; the model can never add to them.
 
@@ -371,13 +373,28 @@ Providers, under `[web]` in the config:
 
 To start every session with web search on, set `enabled = true` under `[web]`.
 
+## Coding
+
+Start padou inside a project (a folder with `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, a `Makefile` or `.git`) and it switches to coding mode by itself. Under the banner it says what it found, for example `Coding project: Python · lantern · git · can run its test, lint`.
+
+- **`@path` attaches a file** to your message: `why does @src/app.py crash on empty input?` (`Tab` completes the path). padou reads it straight away, so the model doesn't have to ask.
+- **Tests, linters and builds:** padou finds the project's own commands (`uv run pytest`, `npm run test`, `cargo test`, `go vet ./...`, `make lint`…) and, in edit or admin mode, the model can ask to run one after a change. You approve each run, or answer `a` to allow that command for the rest of the session. padou never invents a command: only the ones it found, and only if the program is installed.
+- **`/review`** asks the model to look at your uncommitted changes (`git diff`) and list problems, most important first, without changing anything. `/review error handling` focuses it.
+- **See a change in your editor:** if VS Code, Code OSS or VSCodium is installed, the confirmation box for an edit offers `d`, which opens the change side by side in the editor. Then answer `y` or `n` as usual.
+- **`/tutor on`** is for learning: padou explains, gives hints and asks what you think the next step is, instead of writing the code. The status line shows `tutor`.
+
+> [!TIP]
+> **Autocomplete while you type in Code OSS:** padou is the chat and editing side. For grey-text suggestions as you type, install [llama.vscode](https://github.com/ggml-org/llama.vscode) from [Open VSX](https://open-vsx.org/extension/ggml-org/llama-vscode) (the store Code OSS uses). It's made by the llama.cpp team and runs a small autocomplete model next to padou's; its README suggests a 1.5B Qwen Coder model for machines with little memory. Run padou in Code OSS's terminal panel (`` Ctrl+` ``) to have both in one window.
+
+A 4B model is good at explaining code and errors, small functions, scripts and regexes, and focused fixes in one file. It's weaker at big changes across many files: break those into steps. `padou bench` includes two coding questions, so you can compare models for this too.
+
 ## Testing a model: `padou bench`
 
 ```bash
 padou bench
 ```
 
-It asks the model 15 fixed questions in a practice folder with known files (a README, a config, notes, a log), lets it use padou's read-only tools, and scores each answer: did it use the right tool, and is the answer right? It also includes a few traps, like a file that doesn't exist, which the model must admit rather than invent. Nothing on your computer is changed and nothing goes online. The score and times are saved under padou's state folder (`bench/`), so you can compare models (`/models`), settings and padou versions.
+It asks the model 17 fixed questions in a practice folder with known files (a README, a config, notes, a log, some code), lets it use padou's read-only tools, and scores each answer: did it use the right tool, and is the answer right? It also includes a few traps, like a file that doesn't exist, which the model must admit rather than invent. Nothing on your computer is changed and nothing goes online. The score and times are saved under padou's state folder (`bench/`), so you can compare models (`/models`), settings and padou versions.
 
 ## Autostart
 

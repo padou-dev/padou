@@ -36,7 +36,9 @@ FILES = {
         + ["2026-03-01 10:41:07 ERROR storage: disk quota exceeded for /srv/photos"]
         + [f"2026-03-01 10:{42 + i:02d}:00 INFO request served in {9 + i}ms" for i in range(10)]
     ) + "\n",
-    "src/main.go": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"lantern\")\n}\n",
+    "src/main.go": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"lantern ready\")\n}\n",
+    "src/stats.py": "def average(numbers):\n    \"\"\"The mean of a list of numbers.\"\"\"\n    total = 0\n    for n in numbers:\n"
+                    "        total += n\n    return total / (len(numbers) - 1)\n",
 }
 
 
@@ -54,7 +56,7 @@ TASKS = [
     Task("read-language", "What programming language is Lantern written in? Check the README.", ("read_file",), ("go",)),
     Task("read-licence", "Which licence does this project use?", ("read_file", "search"), ("mit",)),
     Task("list-folders", "Which folders are in the current directory?", ("list_dir",), ("notes", "logs", "src")),
-    Task("search-todos", "How many TODO items are in the notes folder?", ("search", "read_file"), ("3|three",)),
+    Task("search-todos", "In the notes folder, how many lines are marked with TODO?", ("search", "read_file"), ("3|three",)),
     Task("search-error", "Is there an ERROR in logs/app.log? What does it say?", ("search", "read_file"), ("quota",)),
     Task("read-owner", "Who owns the release checklist, according to the meeting notes?", ("read_file", "search"), ("dana",)),
     Task("read-upload", "What's the maximum upload size in the config?", ("read_file", "search"), ("25",)),
@@ -63,6 +65,9 @@ TASKS = [
     Task("cmd-uptime", "How long has this computer been running?", ("run_command",), ()),
     Task("man-option", "Which option of the ls command shows hidden files? Check its manual if you can.", (), ("-a|--all",),
          "the manual helps, but knowing it is fine too"),
+    Task("code-explain", "What does src/main.go print when it runs?", ("read_file",), ("lantern ready",)),
+    Task("code-bug", "The average function in src/stats.py gives wrong results. What's the bug?", ("read_file",),
+         ("len(numbers) - 1|- 1|minus one|minus 1|off-by-one|off by one|len(numbers)",)),
     Task("math", "What is 17 multiplied by 23?", (), ("391",)),
     Task("no-tool-needed", "In one sentence: what is a symbolic link?", (), ("link|points|refer",)),
     Task("honest-missing", "What does the file notes/budget.xlsx say?", ("read_file", "list_dir", "search"),
@@ -160,7 +165,7 @@ def run(cfg: Config, client: Client, th, only: list[str] | None = None) -> int:
                                    (f" in {total_time:.0f}s (average {total_time / max(1, len(outcomes)):.1f}s per question)", "dim")))
     saved = _save(cfg, outcomes)
     ui.console.print(Text(f"Saved to {ui.short_path(saved)}. Run it again after changing the model or settings to compare.", style="dim"))
-    return 0 if passed == len(outcomes) else 2
+    return 0  # a low score isn't an error; it's the result
 
 
 def _save(cfg: Config, outcomes: list[Outcome]) -> Path:

@@ -94,5 +94,15 @@ def utf8_output(*streams) -> None:
             pass  # not a normal text stream (tests, IDEs): leave it alone
 
 
+def code_editor() -> str | None:
+    """VS Code, Code OSS or VSCodium, if one is installed (they all understand `--diff`)."""
+    import shutil
+
+    for name in ("code", "code-oss", "codium", "code-insiders"):
+        if shutil.which(name):
+            return name
+    return None
+
+
 def same_path(a: str, b: str) -> bool:
     return a.lower() == b.lower() if CASE_INSENSITIVE_FS else a == b

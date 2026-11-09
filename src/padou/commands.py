@@ -33,6 +33,7 @@ class Command:
 HELP_GROUPS = [
     ("Chat", ["clear", "compact", "resume", "copy", "think", "web"]),
     ("Files and modes", ["mode", "folder", "undo"]),
+    ("Coding", ["review", "tutor"]),
     ("Model", ["models", "server"]),
     ("padou", ["status", "doctor", "update", "help", "exit"]),
 ]
@@ -59,6 +60,9 @@ def cmd_help(app: "App", arg: str):
 
 
 def cmd_exit(app: "App", arg: str):
+    """/exit, or /exit && stop (also /exit stop) to stop the model server too."""
+    if "stop" in arg.lower():
+        app.stop_server_at_exit = True
     return EXIT
 
 
@@ -604,6 +608,35 @@ def cmd_write(app: "App", arg: str):
     return cmd_mode(app, f"edit {a}" if a else "")
 
 
+def cmd_tutor(app: "App", arg: str):
+    """Tutor mode: padou explains and gives hints instead of writing the code for you."""
+    action = arg.strip().lower()
+    if action not in ("", "on", "off"):
+        ui.error(app.theme, "Usage: /tutor [on|off]")
+        return
+    if not action:
+        state = "on" if app.tutor else "off"
+        ui.info(app.theme, f"Tutor mode is {state}: with it on, padou explains and gives hints instead of writing the code. /tutor on · /tutor off")
+        return
+    app.tutor = action == "on"
+    app.refresh_system_prompt()
+    if app.tutor:
+        ui.success(app.theme, "Tutor mode on: padou explains, gives hints and asks questions; you write the code.")
+    else:
+        ui.success(app.theme, "Tutor mode off.")
+
+
+def cmd_review(app: "App", arg: str):
+    """Ask the model to review the uncommitted changes in this git project."""
+    if app.project is None or not app.project.git:
+        ui.error(app.theme, "/review works in a git project: start padou inside one.")
+        return
+    focus = f" Focus on: {arg.strip()}." if arg.strip() else ""
+    app.ask("Review my uncommitted changes. First look at them with run_command git_diff (and git_status). "
+            "List real problems first (bugs, risks, missing error handling), then smaller suggestions. "
+            "Quote the file and line for each, and suggest fixes, but don't change any files." + focus)
+
+
 def cmd_web(app: "App", arg: str):
     """Web search for this session: off by default."""
     th, cfg = app.theme, app.cfg.web
@@ -844,10 +877,12 @@ COMMANDS: dict[str, Command] = {
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
     "think": Command(cmd_think, "Let the model reason before answering (slower, smarter)", "[on|off]"),
     "web": Command(cmd_web, "Let padou search the web this session (off by default)", "[on|off]"),
+    "tutor": Command(cmd_tutor, "Explain and give hints instead of writing the code (for learning)", "[on|off]"),
+    "review": Command(cmd_review, "Review your uncommitted git changes (bugs first)", "[focus]"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),
     "system": Command(cmd_system, "Show the system prompt"),
     "screenshot": Command(cmd_screenshot, "Save the screen as an SVG image", "[name]"),
-    "exit": Command(cmd_exit, "Quit padou (also Ctrl+D)"),
+    "exit": Command(cmd_exit, "Quit padou (also Ctrl+D); /exit && stop also stops the model server", "[&& stop]"),
     # aliases
     "quit": Command(cmd_exit, "Quit padou"),
     "folders": Command(cmd_folder, "Alias of /folder"),

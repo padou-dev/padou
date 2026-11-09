@@ -5,6 +5,7 @@ from __future__ import annotations
 import getpass
 import os
 import platform
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -86,9 +87,14 @@ def _terminal() -> str:
 class SlashCompleter(Completer):
     def __init__(self):
         self.paths = PathCompleter(only_directories=True, expanduser=True)
+        self.files = PathCompleter(expanduser=True)
 
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor
+        mention = re.search(r"(?:^|\s)@([\w.\-/~]*)$", text)
+        if mention:  # @path: attach a file; Tab completes it
+            yield from self.files.get_completions(Document(mention.group(1)), complete_event)
+            return
         for prefix in ("/folder add ", "/folder remove ", "/folders add ", "/mode edit ", "/write "):
             if text.startswith(prefix):  # Tab-complete folder paths
                 sub = Document(text[len(prefix):])
@@ -124,6 +130,12 @@ class App:
                     self.folders.append(p)
         self.thinking = cfg.chat.thinking  # /think switches it for this session
         self.web_on = cfg.web.enabled  # /web switches it; off unless the config says otherwise
+        self.tutor = False  # /tutor: explain and hint instead of writing the code
+        self.stop_server_at_exit = False  # /exit && stop
+        self.allowed_project_commands: set[str] = set()  # project commands the user allowed for this session
+        from padou import project as project_mod
+
+        self.project = project_mod.detect(cwd) if cfg.tools.enabled else None
         self.mode = "read"  # "read" (default), "edit" (in write_roots) or "admin" (anywhere); see set_mode
         self.write_roots: list[Path] = []  # edit mode: the folders padou may change
         self._folders_before_admin: list[Path] | None = None
@@ -165,6 +177,7 @@ class App:
             "the user asked."
         )
         context += self._web_context()
+        context += self._coding_context()
         if self.mode == "admin":
             context += (
                 "\nADMIN MODE is on: you may change files anywhere on this system (not secret locations), with "
@@ -178,6 +191,18 @@ class App:
             context += ("\nYou cannot change files (read-only mode). If a change is needed, show it; the user can "
                         "allow changes with /mode edit or /mode admin.")
         return {"role": "system", "content": self.cfg.chat.system_prompt + context}
+
+    def _coding_context(self) -> str:
+        text = ""
+        if getattr(self, "project", None) is not None:
+            text += (f"\nCODING: you're in a {self.project.describe()}. Read files before you explain or change them; "
+                     "files the user attaches with @path are included in their message. When changing code, make the "
+                     "smallest change, keep the existing style, and afterwards offer to run the tests (project_command).")
+        if getattr(self, "tutor", False):
+            text += ("\nTUTOR MODE: the user is learning. Explain concepts and the reasons behind them, give hints and "
+                     "small examples, ask what they think the next step is. Don't write the full solution or change "
+                     "their files unless they explicitly ask for it.")
+        return text
 
     def _web_context(self) -> str:
         if not self.web_on:
@@ -242,15 +267,24 @@ class App:
     def ask(self, user_text: str) -> None:
         from padou import client as client_mod, models, web
 
+        from padou import project as project_mod
+
         self._auto_compact()
         messages = self.session.messages
         checkpoint = len(messages)
-        messages.append({"role": "user", "content": user_text})
+        extra_text, attached, problems = project_mod.attachments(user_text, self.cwd, self.folders)
+        for name in attached:
+            ui.info(self.theme, f"  attached @{name}")
+        for problem in problems:
+            ui.info(self.theme, f"  {problem}")
+        messages.append({"role": "user", "content": user_text + extra_text})
         tool_defs = tools.definitions(self.cfg.tools.commands) if self.cfg.tools.enabled else None
         if tool_defs is not None and self.mode != "read":
             tool_defs = tool_defs + writes.definitions()
         if tool_defs is not None and self.web_on:
             tool_defs = tool_defs + web.definitions()
+        if tool_defs is not None and self.project is not None and self.project.commands and self.mode != "read":
+            tool_defs = tool_defs + [project_mod.definition(self.project)]
         extra = models.request_extra(self.cfg.server, self.thinking)
         started = time.monotonic()
         failures: dict[str, int] = {}  # the same tool call failing again and again
@@ -308,6 +342,12 @@ class App:
                         if not result.ok:
                             failures[key] = failures.get(key, 0) + 1
                         continue
+                    if call.name == "project_command":
+                        result = self._handle_project_command(call)
+                        messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})
+                        if not result.ok:
+                            failures[key] = failures.get(key, 0) + 1
+                        continue
                     if call.name in writes.TOOL_NAMES:
                         result = self._handle_write(call)
                         messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})
@@ -337,6 +377,34 @@ class App:
             return
         self.session.save()
         self._context_warning()
+
+    def _handle_project_command(self, call) -> tools.ToolResult:
+        """Run the project's tests/lint/build, after the user says yes (or allowed it for the session)."""
+        import json
+
+        from padou import project as project_mod
+
+        try:
+            name = str(json.loads(call.arguments or "{}").get("name", ""))
+        except (ValueError, AttributeError):
+            name = ""
+        if self.project is None or name not in self.project.commands:
+            have = ", ".join(self.project.commands) if self.project else "none"
+            return tools.ToolResult(False, f"error: no project command {name!r}. Available: {have}", "project", "unknown")
+        argv = self.project.commands[name]
+        shown = " ".join(argv)
+        if name not in self.allowed_project_commands:
+            answer = ui.choose(self.theme, f"  Run the project's {name}: {shown}?", {"y": "yes", "n": "no", "a": "always this session"}, "n")
+            if answer == "n":
+                ui.info(self.theme, "  Not run.")
+                return tools.ToolResult(False, "The user declined to run it. Don't ask again unless they want you to.", "project", "declined")
+            if answer == "a":
+                self.allowed_project_commands.add(name)
+        with ui.ReplyView(self.theme, f"running {shown}… (Ctrl+C stops it)"):
+            ok, out = project_mod.run(self.project, name, self.cfg.tools.max_output_chars)
+        lines = out.count("\n")
+        ui.tool_call(self.theme, f"Run {shown}", ("passed" if ok else "failed") + f" · {lines} lines", ok, out, self.cfg.ui.show_tool_output)
+        return tools.ToolResult(True, out, f"Run {shown}", "passed" if ok else "failed")
 
     def _handle_write(self, call) -> tools.ToolResult:
         """Show the change in a box, ask the user, and only then do it (with a backup)."""
@@ -453,6 +521,8 @@ class App:
             out.append(("class:tb.accent", "· thinking "))
         if getattr(self, "web_on", False):
             out.append(("class:tb.accent", "· web "))
+        if getattr(self, "tutor", False):
+            out.append(("class:tb.accent", "· tutor "))
         if self.mode == "admin":
             out.append(("class:tb.warn", "· ✎ admin: anywhere "))
         elif self.mode == "edit" and self.write_roots:
@@ -586,7 +656,13 @@ class App:
             ui.console.print()
             self.ask(line)
         self.session.save()
-        if self.cfg.server.stop_on_exit and self.started_pid:
+        if self.stop_server_at_exit:
+            procs = server.find(self.cfg.server)
+            if procs and server.stop(procs):
+                ui.info(self.theme, "Stopped the model server.")
+            elif not procs:
+                ui.info(self.theme, "No model server of yours was running.")
+        elif self.cfg.server.stop_on_exit and self.started_pid:
             procs = [p for p in server.find(self.cfg.server) if p.pid == self.started_pid]
             if procs and server.stop(procs):
                 ui.info(self.theme, "Stopped the model server padou started (stop_on_exit).")
