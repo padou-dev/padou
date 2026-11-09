@@ -106,7 +106,7 @@ llama-server -hf bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M \
 |---|---|
 | `-ngl 99` | Put every layer on the GPU |
 | `--jinja` | Use the model's chat template; required for tool calling |
-| `--reasoning-budget 0` | Turn off "thinking", which small models tend to overdo |
+| `--reasoning-budget 0` | Turn off "thinking", which small models tend to overdo. Remove it to switch thinking per question with `/think` (padou offers to do this for you) |
 | `-c 8192` | Context window in tokens |
 | `--no-mmproj` | Skip the vision add-on; padou is text-only |
 
@@ -165,7 +165,7 @@ padou --version
 |---|---|
 | `/help` | Show commands and keys |
 | `/clear` | Start a fresh conversation (the old one is saved) |
-| `/models [n\|name]` | List models, or switch to one (downloads it if needed) |
+| `/models [n\|remove n]` | List models, switch to one (downloads it if needed), or remove a downloaded one |
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard |
 | `/tools` | List the tools padou may use |
@@ -177,6 +177,7 @@ padou --version
 | `/folder [add <path>]` | Folders padou may read: list, `add <path> [--always]`, `remove <n>`, `anywhere`, `restrict` |
 | `/resume [n]` | List saved sessions, or continue one |
 | `/compact` | Summarise the conversation to free up context |
+| `/think [on\|off]` | Let the model reason before answering: smarter on hard questions, much slower (this session) |
 | `/doctor` | Run the checks from inside padou |
 | `/system` | Show the system prompt |
 | `/screenshot [name]` | Save the screen as an SVG image (in `~/Pictures/padou/`) |
@@ -184,7 +185,9 @@ padou --version
 
 ### Keys
 
-`Enter` send · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Ctrl+C` cancel a reply · `Ctrl+D` quit
+`Enter` send · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Esc` stop a reply (keeps what's written) · `Ctrl+C` cancel a reply · `Ctrl+D` quit
+
+While padou works you see what it's doing (`working…`, `thinking…`, `choosing a tool…`) and for how long; as the reply streams, its length and speed.
 
 ## Folder access
 
@@ -250,11 +253,26 @@ How it stays safe:
 
 Type `/models` to see every model padou knows, with **●** on the one in use and **✓** on the ones already downloaded. Then type `/models 4` (or `/models phi`) to switch:
 
-- **llama.cpp:** padou saves the new model in your config, restarts llama-server with it and waits while it loads. A model you haven't used before downloads once first (padou asks before downloading). Old downloads stay in `~/.cache/huggingface`, so switching back is quick.
+- **llama.cpp:** padou saves the new model in your config, restarts llama-server with it and waits while it loads. A model you haven't used before downloads once first (padou asks before downloading). Old downloads stay in llama.cpp's cache, so switching back is quick (`/models remove` frees the space).
 - **Ollama:** padou offers to run `ollama pull` if the model isn't there yet, then switches straight away.
 - **Other servers** (LM Studio, remote ones): padou lists what the server offers and switches for this session.
 
 Your choice is saved, so padou starts with it next time. A model you set yourself in `start_command` shows at the top of the list.
+
+### Removing a model
+
+Models are big (1.4 to 6.2 GB), so remove the ones you no longer use:
+
+```
+/models remove 4
+```
+
+padou shows the model's files and size and asks first (the default is no). Then:
+
+- **llama.cpp:** the files go to the **Trash** (the **Recycle Bin** on Windows), so you can still restore them. The disk space is freed once you empty the Trash.
+- **Ollama:** Ollama deletes the model for good (it has no Trash).
+
+You can't remove the model you're using: switch to another one first. A removed model downloads again if you pick it later.
 
 ## The model server
 
@@ -383,7 +401,7 @@ See [`config.example.toml`](config.example.toml) for every option.
 |---|---|
 | `Can't reach the model server` | `llama-server` isn't running, or is on another port. Start it, or set `[server] url`. Run `padou doctor` |
 | `Server error 500 … tool` | llama-server was started without `--jinja`. Restart it with the flag |
-| Replies take forever and "think" in circles | Reasoning is on. Add `--reasoning-budget 0` to llama-server |
+| Replies take forever and "think" in circles | Reasoning is on. `/think off`, or add `--reasoning-budget 0` to llama-server |
 | Very slow replies (2–5 tok/s) | The model is running on the CPU. Check `llama-cli --list-devices` shows Vulkan, and use `-ngl 99` |
 | `The server took longer than 180s` | Long answer on a slow machine. Raise `[server] timeout` |
 | `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |

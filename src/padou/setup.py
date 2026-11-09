@@ -122,10 +122,12 @@ def run(theme: Theme, auto: bool = False) -> bool:
         use_gpu = gpu_build if gpu_build is not None else system.gpu.vendor != "none"
         if gpu_build is False and system.gpu.vendor != "none":
             ui.console.print(Text(f"Your llama.cpp is a CPU-only build, but you have a GPU. A {system.gpu.backend.upper()} build would be much faster.", style=theme.warn))
-        command, warnings = detect.build_start_command(model, info, use_gpu)
+        ctx = detect.context_for(system)
+        command, warnings = detect.build_start_command(model, info, use_gpu, context=ctx)
         for w in warnings:
             ui.console.print(Text(w, style=theme.warn))
-        srv = ServerConfig(url=llama.url, model=model.hf, model_label=model.label, autostart=True, start_command=command)
+        srv = ServerConfig(url=llama.url, model=model.hf, model_label=model.label, autostart=True, start_command=command,
+                           context_size=ctx)
         if llama.running and llama.models and model.hf not in llama.models:
             ui.info(theme, f"Note: llama-server is already running another model ({llama.models[0]}). Restart it to switch: /server restart")
         _write(theme, srv)
@@ -164,8 +166,9 @@ def run(theme: Theme, auto: bool = False) -> bool:
     ui.table(theme, "How to install a model server here", ["What", "Command"], rows)
     ui.info(theme, "padou doesn't run these for you, because they need your password or download installers.")
     model = _pick_model(theme, system, auto)
-    command, _ = detect.build_start_command(model, detect.LlamaInfo(), system.gpu.vendor != "none")
-    srv = ServerConfig(model=model.hf, model_label=model.label, autostart=True, start_command=command)
+    ctx = detect.context_for(system)
+    command, _ = detect.build_start_command(model, detect.LlamaInfo(), system.gpu.vendor != "none", context=ctx)
+    srv = ServerConfig(model=model.hf, model_label=model.label, autostart=True, start_command=command, context_size=ctx)
     if _yes("Write a config for llama.cpp now, so `padou` works as soon as it's installed?", True, auto):
         _write(theme, srv)
         return True

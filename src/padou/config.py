@@ -47,6 +47,7 @@ class ChatConfig:
     temperature: float = 0.7
     stream: bool = True
     max_tool_rounds: int = 8
+    thinking: bool = False  # let thinking models reason before answering (slower); /think switches it
 
 
 @dataclass
@@ -163,6 +164,7 @@ stop_on_exit = {str(s.stop_on_exit).lower()}                     # stop a server
 temperature = 0.7
 stream = true                           # show replies as they are written
 max_tool_rounds = 8                     # tool calls allowed per question
+thinking = false                        # thinking models reason first: better on hard questions, much slower (/think)
 # system_prompt = \"\"\"You are padou...\"\"\"
 
 [tools]

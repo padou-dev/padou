@@ -59,10 +59,86 @@ def _show_models(app: "App", items, k: str) -> None:
              styles=[th.dim, "bold", th.dim, th.dim, th.ok, ""])
     if k == "llama.cpp":
         ui.info(th, "● in use · ✓ downloaded. Switch with /models <number>; a new model downloads once, then starts.")
+        ui.info(th, "Free the space a downloaded model uses: /models remove <number>.")
     elif k == "ollama":
         ui.info(th, "● in use · ✓ pulled. Switch with /models <number>; padou offers to pull it if needed.")
+        ui.info(th, "Delete a pulled model: /models remove <number>.")
     else:
         ui.info(th, "Switch with /models <number or name>. This server is managed outside padou.")
+
+
+def _remove_model(app: "App", items, k: str, arg: str) -> None:
+    """/models remove <n|name>: free the disk space a downloaded model uses."""
+    from rich.panel import Panel
+    from rich.console import Group
+    from rich.text import Text
+
+    from padou import models, writes
+
+    th = app.theme
+    if not arg.strip():
+        ui.error(th, "Which one? Type /models to see the numbers, then /models remove <number>.")
+        return
+    if k == "other":
+        ui.error(th, "padou can only remove models that llama.cpp downloaded or that Ollama pulled. "
+                     "This server is managed outside padou.")
+        return
+    entry = models.pick(items, arg)
+    if entry is None:
+        ui.error(th, f"No model '{arg.strip()}'. Type /models to see the list.")
+        return
+    if entry.current:
+        ui.error(th, f"{entry.label} is the model you're using. Switch to another one first (/models <number>), then remove it.")
+        return
+    if not entry.downloaded:
+        ui.info(th, f"{entry.label} isn't downloaded, so there's nothing to remove.")
+        return
+
+    if k == "ollama":
+        body = [Text(f"Ollama deletes {entry.ident} for good (Ollama has no Trash).", style=th.dim),
+                Text("You can pull it again later with /models.", style=th.dim)]
+        ui.console.print(Panel(Group(*body), title=Text(f" ✖ Remove model {entry.label} ", style=f"bold {th.warn}"),
+                               title_align="left", border_style=th.warn, padding=(0, 1)))
+        if not ui.confirm("  Remove it?", default=False):
+            ui.info(th, "  Kept it.")
+            return
+        problem = models.remove_ollama(app.cfg.server, entry.ident)
+        if problem:
+            ui.error(th, f"Couldn't remove it: {problem}")
+        else:
+            ui.success(th, f"Removed {entry.label}.")
+        return
+
+    plan = models.removal_plan(entry.ident)
+    if not plan.paths:
+        ui.error(th, f"Couldn't find {entry.label}'s files. They may be somewhere padou doesn't look (see /models).")
+        return
+    body = [Text.assemble((f"{writes.human_size(plan.size)}", "bold"), (f" in {len(plan.paths)} item" + "s" * (len(plan.paths) != 1), th.dim))]
+    for p in plan.paths[:8]:
+        body.append(Text("  " + ui.short_path(p), style=th.dim))
+    if len(plan.paths) > 8:
+        body.append(Text(f"  … and {len(plan.paths) - 8} more", style=th.dim))
+    body.append(Text(f"It goes to the {compat.TRASH}. The space is freed once you empty the {compat.TRASH}.", style=th.dim))
+    body.append(Text("You can download it again any time with /models.", style=th.dim))
+    ui.console.print(Panel(Group(*body), title=Text(f" ✖ Remove model {entry.label} ", style=f"bold {th.warn}"),
+                           title_align="left", border_style=th.warn, padding=(0, 1)))
+    if not ui.confirm("  Remove it?", default=False):
+        ui.info(th, "  Kept it.")
+        return
+    moved = 0
+    for p in plan.paths:
+        if not p.exists() and not p.is_symlink():
+            continue  # already gone with its folder
+        try:
+            writes.move_to_trash(p)
+            moved += 1
+        except writes.WriteError as exc:
+            ui.error(th, f"Stopped: {exc}")
+            if moved:
+                ui.info(th, f"  {moved} item(s) were already moved to the {compat.TRASH}; restore them from there if you like.")
+            return
+    ui.success(th, f"Removed {entry.label}: {writes.human_size(plan.size)} moved to the {compat.TRASH}. "
+                   f"Empty the {compat.TRASH} to free the space.")
 
 
 def _save_model(app: "App", values: dict) -> None:
@@ -161,6 +237,10 @@ def cmd_models(app: "App", arg: str):
     items = models.entries(cfg, running)
     if not arg.strip():
         _show_models(app, items, k)
+        return
+    words = arg.split(None, 1)
+    if words[0].lower() in ("remove", "rm", "delete"):
+        _remove_model(app, items, k, words[1] if len(words) > 1 else "")
         return
     entry = models.pick(items, arg)
     if entry is None:
@@ -493,6 +573,44 @@ def cmd_server(app: "App", arg: str):
     ui.error(th, "Usage: /server [status | stop | restart | log]")
 
 
+def cmd_think(app: "App", arg: str):
+    """Switch the model's thinking (reasoning before it answers) on or off for this session."""
+    from padou import models
+
+    th, cfg = app.theme, app.cfg.server
+    action = arg.strip().lower()
+    if action not in ("", "on", "off"):
+        ui.error(th, "Usage: /think [on|off]")
+        return
+    if not action:
+        state = "on" if app.thinking else "off"
+        ui.info(th, f"Thinking is {state}. With it on, the model reasons before answering: better on hard "
+                    "questions, but much slower on a laptop. /think on · /think off")
+        return
+    want = action == "on"
+    k = models.kind(cfg)
+    if want and k == "other":
+        ui.info(th, "This server is managed outside padou, so padou can't switch its thinking. "
+                    "It thinks (or not) the way the server is set up.")
+        return
+    if want and k == "llama.cpp" and models.thinking_blocked(cfg.start_command):
+        ui.info(th, "Your model server starts with thinking switched off for good (--reasoning-budget 0).")
+        ui.info(th, "padou can remove that from the start command, so it can switch thinking per question.")
+        if not ui.confirm("Update the start command and restart the model server now?", default=False):
+            ui.info(th, "Kept it as it is (thinking stays off).")
+            return
+        new = models.without_thinking_block(cfg.start_command)
+        cfg.start_command = new
+        _save_model(app, {"start_command": new})
+        cmd_server(app, "restart")
+    app.thinking = want
+    if want:
+        ui.success(th, "Thinking on for this session: slower, better for hard questions. /think off switches it back.")
+        ui.info(th, "(Only some models can think, Qwen3.5 among them. Default for new sessions: thinking under [chat] in the config.)")
+    else:
+        ui.success(th, "Thinking off: quick, direct answers.")
+
+
 def cmd_system(app: "App", arg: str):
     ui.markdown("```text\n" + app.session.messages[0]["content"] + "\n```")
 
@@ -554,7 +672,7 @@ def cmd_update(app: "App", arg: str):
 COMMANDS: dict[str, Command] = {
     "help": Command(cmd_help, "Show commands and keys"),
     "clear": Command(cmd_clear, "Start a fresh conversation"),
-    "models": Command(cmd_models, "List models, or switch to one (downloads it if needed)", "[n|name]"),
+    "models": Command(cmd_models, "List models, switch to one (downloads it if needed), or remove one", "[n|remove n]"),
     "status": Command(cmd_status, "Model, server, context use and speed"),
     "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),
     "tools": Command(cmd_tools, "List the tools padou may use"),
@@ -566,6 +684,7 @@ COMMANDS: dict[str, Command] = {
     "update": Command(cmd_update, "Check for a newer padou and install it"),
     "resume": Command(cmd_resume, "List saved sessions, or continue one", "[n]"),
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
+    "think": Command(cmd_think, "Let the model reason before answering (slower, smarter)", "[on|off]"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),
     "system": Command(cmd_system, "Show the system prompt"),
     "screenshot": Command(cmd_screenshot, "Save the screen as an SVG image", "[name]"),

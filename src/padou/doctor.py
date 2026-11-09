@@ -14,6 +14,20 @@ from padou.config import Config
 from padou.theme import Theme
 
 
+def tuning_tip(cfg: Config, n_ctx: int | None) -> str:
+    """A hint when an older setup misses the speed settings newer ones get."""
+    from padou import detect, models
+
+    if models.kind(cfg.server) != "llama.cpp":
+        return ""
+    missing = []
+    if (n_ctx or 0) < 16384 and detect._ram_gb() >= 14:
+        missing.append("a 16K context")
+    if "--cache-reuse" not in cfg.server.start_command:
+        missing.append("prompt-cache reuse")
+    return f"run `padou setup` again for {' and '.join(missing)}" if missing else ""
+
+
 def run(cfg: Config, theme: Theme, client: Client) -> bool:
     checks: list[tuple[str, bool | None, str]] = []  # None = just information
 
@@ -37,6 +51,9 @@ def run(cfg: Config, theme: Theme, client: Client) -> bool:
             checks.append(("Models offered", False, str(exc)))
         n_ctx = client.context_size()
         checks.append(("Context window", None, f"{n_ctx} tokens (from server)" if n_ctx else f"{cfg.server.context_size} tokens (from config)"))
+        tip = tuning_tip(cfg, n_ctx)
+        if tip:
+            checks.append(("Tuning", None, tip))
         try:
             reply = client.chat([{"role": "user", "content": "Reply with the single word: ready"}], stream=False, temperature=0)
             speed = f", {reply.tokens_per_second:.1f} tok/s" if reply.tokens_per_second else ""

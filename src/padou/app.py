@@ -86,6 +86,7 @@ class App:
                 p = Path(os.path.expanduser(f)).resolve()
                 if p.is_dir() and p not in self.folders:
                     self.folders.append(p)
+        self.thinking = cfg.chat.thinking  # /think switches it for this session
         self.write_roots: list[Path] = []  # write mode: off until /write <folder>
         self.changes: list[writes.Applied] = []  # what padou changed this session (for /undo)
         self.started_pid: int | None = None  # a model server padou started itself
@@ -165,21 +166,31 @@ class App:
         tool_defs = tools.definitions(self.cfg.tools.commands) if self.cfg.tools.enabled else None
         if tool_defs is not None and self.write_roots:
             tool_defs = tool_defs + writes.definitions()
+        from padou import models
+
+        extra = models.request_extra(self.cfg.server, self.thinking)
         try:
             for _ in range(self.cfg.chat.max_tool_rounds + 1):
-                with ui.ReplyView(self.theme) as view:
+                with ui.ReplyView(self.theme, live=True) as view:
                     reply = self.client.chat(
                         messages,
                         tools=tool_defs,
                         temperature=self.cfg.chat.temperature,
                         stream=self.cfg.chat.stream,
                         on_text=view.feed,
+                        extra=extra,
+                        on_progress=view.progress,
+                        should_stop=view.stop_requested,
                     )
+                if reply.tokens_per_second is None:  # stopped early, or the server sent no timings
+                    reply.tokens_per_second = view.speed()
                 self._record_stats(reply)
                 if not reply.tool_calls:
                     messages.append({"role": "assistant", "content": reply.content})
                     self.last_reply = reply.content
-                    if not reply.content.strip():
+                    if reply.stopped:
+                        ui.info(self.theme, "(stopped)")
+                    elif not reply.content.strip():
                         ui.info(self.theme, "(the model returned an empty reply)")
                     if reply.finish_reason == "length":
                         ui.info(self.theme, "(reply cut off: the model hit its length limit)")
@@ -302,6 +313,8 @@ class App:
             ("class:tb.accent", f" {star} {self.model_label}"),
             ("class:tb", f" · {speed} · ctx {self.ctx_used}/{self.ctx_size}{pct} · /help "),
         ]
+        if self.thinking:
+            out.append(("class:tb.accent", "· thinking "))
         if self.write_roots:
             names = ", ".join(ui.short_path(r) for r in self.write_roots)
             out.append(("class:tb.warn", f"· ✎ write: {names} "))

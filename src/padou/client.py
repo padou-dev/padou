@@ -32,6 +32,7 @@ class Reply:
     completion_tokens: int | None = None
     tokens_per_second: float | None = None
     elapsed: float = 0.0
+    stopped: bool = False  # the user pressed Esc: content is what arrived until then
 
 
 class Client:
@@ -96,16 +97,27 @@ class Client:
         temperature: float = 0.7,
         stream: bool = True,
         on_text: Callable[[str], None] | None = None,
+        extra: dict | None = None,
+        on_progress: Callable[[str], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> Reply:
+        """Send the conversation, return the reply.
+
+        extra: server-specific fields (thinking on/off, prompt cache).
+        on_progress("thinking" | "tool"): the model is reasoning or writing a tool call.
+        should_stop(): checked as the reply streams in; True stops it (Esc).
+        """
         body: dict = {"model": self.model, "messages": messages, "temperature": temperature}
         if tools:
             body["tools"] = tools
+        if extra:
+            body.update(extra)
         started = time.monotonic()
         try:
             if stream:
                 body["stream"] = True
                 body["stream_options"] = {"include_usage": True}
-                reply = self._stream(body, on_text)
+                reply = self._stream(body, on_text, on_progress, should_stop)
             else:
                 r = self.http.post(f"{self.base}/v1/chat/completions", json=body)
                 r.raise_for_status()
@@ -119,7 +131,7 @@ class Client:
             reply.tokens_per_second = reply.completion_tokens / reply.elapsed
         return reply
 
-    def _stream(self, body: dict, on_text) -> Reply:
+    def _stream(self, body: dict, on_text, on_progress=None, should_stop=None) -> Reply:
         reply = Reply()
         calls: dict[int, dict] = {}
         with self.http.stream("POST", f"{self.base}/v1/chat/completions", json=body) as r:
@@ -127,14 +139,25 @@ class Client:
                 r.read()
                 raise httpx.HTTPStatusError(f"HTTP {r.status_code}", request=r.request, response=r)
             for chunk in self._events(r.iter_lines()):
+                if should_stop is not None and should_stop():
+                    reply.stopped = True
+                    reply.finish_reason = "stopped"
+                    calls.clear()  # a half-written tool call is no use
+                    break  # leaving the `with` closes the connection; the server stops generating
                 self._read_usage(chunk, reply)
                 for choice in chunk.get("choices") or []:
                     delta = choice.get("delta") or {}
+                    # thinking models stream their reasoning separately (llama.cpp: reasoning_content,
+                    # Ollama: reasoning); it isn't shown or kept, only reported as progress
+                    if (delta.get("reasoning_content") or delta.get("reasoning")) and on_progress:
+                        on_progress("thinking")
                     text = delta.get("content")
                     if text:
                         reply.content += text
                         if on_text:
                             on_text(text)
+                    if delta.get("tool_calls") and on_progress:
+                        on_progress("tool")
                     for tc in delta.get("tool_calls") or []:
                         slot = calls.setdefault(tc.get("index", 0), {"id": "", "name": "", "arguments": ""})
                         if tc.get("id"):

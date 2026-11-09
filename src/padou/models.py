@@ -63,6 +63,41 @@ def current_hf(cfg: ServerConfig) -> str:
     return ""
 
 
+def thinking_blocked(start_command: str) -> bool:
+    """True if llama-server is started with thinking switched off for good (--reasoning-budget 0)."""
+    try:
+        argv = compat.split_command(start_command)
+    except ValueError:
+        return False
+    return any(a == "--reasoning-budget" and argv[i + 1:i + 2] == ["0"] for i, a in enumerate(argv))
+
+
+def without_thinking_block(start_command: str) -> str:
+    """The same start command without --reasoning-budget 0, so padou can switch thinking per question."""
+    argv = compat.split_command(start_command)
+    out, skip = [], False
+    for i, a in enumerate(argv):
+        if skip:
+            skip = False
+            continue
+        if a == "--reasoning-budget" and argv[i + 1:i + 2] == ["0"]:
+            skip = True
+            continue
+        out.append(a)
+    return compat.join_command(out)
+
+
+def request_extra(cfg: ServerConfig, thinking: bool) -> dict:
+    """Server-specific request fields: thinking on/off, and llama.cpp's prompt cache."""
+    k = kind(cfg)
+    if k == "llama.cpp":
+        # cache_prompt: reuse what the server already read (the system prompt, the chat so far)
+        return {"cache_prompt": True, "chat_template_kwargs": {"enable_thinking": thinking}}
+    if k == "ollama" and not thinking and "qwen3" in (cfg.model or "").lower():
+        return {"reasoning_effort": "none"}  # Ollama thinks by default for Qwen3 models
+    return {}
+
+
 def with_model(start_command: str, hf: str) -> str:
     """The same start command, with its -hf model swapped."""
     argv = compat.split_command(start_command)
@@ -119,6 +154,70 @@ def is_downloaded(hf: str) -> bool:
         if any(quant.lower() in p.name.lower() for p in d.glob(f"{flat}*.gguf")):
             return True
     return False
+
+
+# --------------------------------------------------------------------------- #
+# Removing a downloaded model (/models remove)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class Removal:
+    paths: list[Path]  # files or folders, each goes to the Trash as a whole
+    size: int  # bytes
+
+
+def _size(path: Path) -> int:
+    try:
+        if path.is_symlink() or path.is_file():
+            return path.stat().st_size
+        return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
+    except OSError:
+        return 0
+
+
+def removal_plan(hf: str) -> Removal:
+    """Which files make up a downloaded llama.cpp model (only that quantisation)."""
+    repo, _, quant = hf.partition(":")
+    quant = (quant or "Q4_K_M").lower()
+    found: list[Path] = []
+    for d in _cache_dirs():
+        # Hugging Face cache: the whole models--org--repo folder, unless it also holds other quantisations
+        hub = d / ("models--" + repo.replace("/", "--"))
+        if hub.is_dir():
+            ggufs = list(hub.glob("snapshots/*/*.gguf"))
+            mine = [g for g in ggufs if quant in g.name.lower()]
+            if mine and len(mine) == len(ggufs):
+                found.append(hub)
+            else:
+                for g in mine:
+                    found.append(g)
+                    try:
+                        if g.is_symlink():
+                            found.append(g.resolve())  # the blob holding the actual data
+                    except OSError:
+                        pass
+        # llama.cpp's own cache: <org>_<repo>_<file>.gguf, plus small .json/.etag files beside it
+        flat = repo.replace("/", "_").lower()
+        for f in d.iterdir() if d.is_dir() else []:
+            name = f.name.lower()
+            if f.is_file() and name.startswith(flat) and quant in name:
+                found.append(f)
+    unique = list(dict.fromkeys(found))
+    size = sum(_size(p) for p in unique if not p.is_symlink())
+    return Removal(unique, size)
+
+
+def remove_ollama(cfg: ServerConfig, tag: str) -> str:
+    """Ask Ollama to delete a pulled model. Returns "" or a problem."""
+    url = cfg.url.rstrip("/").removesuffix("/v1") + "/api/delete"
+    try:
+        r = httpx.request("DELETE", url, json={"model": tag}, timeout=30)
+    except httpx.HTTPError as exc:
+        return f"couldn't reach Ollama ({exc})"
+    if r.status_code == 200:
+        return ""
+    return f"Ollama said {r.status_code}: {r.text.strip()[:200]}"
 
 
 # --------------------------------------------------------------------------- #

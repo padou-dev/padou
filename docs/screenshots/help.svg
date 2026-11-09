@@ -45,10 +45,10 @@
 <text x="283.3" y="312" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Start a fresh conversation                                     </text>
 <rect x="826.5" y="299" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="316" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="329" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /models [n|name]            </text>
+<text x="30.4" y="329" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /models [n|remove n]        </text>
 <rect x="278.5" y="316" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="329" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> List models, or switch to one (downloads it if needed)         </text>
-<rect x="826.5" y="316" width="1.2" height="17" fill="#7f849c"/>
+<text x="283.3" y="329" fill="#c8cde8" textLength="573.2" lengthAdjust="spacingAndGlyphs"> List models, switch to one (downloads it if needed), or remove one </text>
+<rect x="860.2" y="316" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="333" width="1.2" height="17" fill="#7f849c"/>
 <text x="30.4" y="346" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /status                     </text>
 <rect x="278.5" y="333" width="1.2" height="17" fill="#7f849c"/>

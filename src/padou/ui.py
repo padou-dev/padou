@@ -108,23 +108,26 @@ class _Keys:
         except Exception:
             self.old = None
 
-    def pressed(self) -> bool:
+    def read(self) -> str:
+        """Keys pressed since the last call ("" if none). They're swallowed, so they
+        don't land in the next prompt."""
         if self.windows:
             import msvcrt
 
-            if msvcrt.kbhit():
-                while msvcrt.kbhit():
-                    msvcrt.getwch()  # swallow it, so it doesn't land in the prompt
-                return True
-            return False
+            keys = ""
+            while msvcrt.kbhit():
+                keys += msvcrt.getwch()
+            return keys
         if self.old is None:
-            return False
+            return ""
         import select
 
         if select.select([0], [], [], 0)[0]:
-            os.read(0, 1024)  # swallow it, so it doesn't land in the prompt
-            return True
-        return False
+            return os.read(0, 1024).decode(errors="replace")
+        return ""
+
+    def pressed(self) -> bool:
+        return bool(self.read())
 
     def close(self) -> None:
         if self.old is not None:
@@ -188,44 +191,143 @@ def launch(banner, theme: Theme, worker, status=lambda: "") -> object:
 # --------------------------------------------------------------- streaming
 
 
-class ReplyView:
-    """Spinner until the first token, then live-rendered Markdown."""
+PHASES = {"thinking": "thinking…", "tool": "choosing a tool…"}
 
-    def __init__(self, theme: Theme, label: str = "thinking…"):
+
+def is_escape(keys: str) -> bool:
+    """A plain Esc press, not the start of an arrow key or other escape sequence."""
+    for i, ch in enumerate(keys):
+        if ch == "\x1b" and keys[i + 1:i + 2] not in ("[", "O"):
+            return True
+    return False
+
+
+class ReplyView:
+    """Spinner until the first token, then live-rendered Markdown.
+
+    With live=True (chat replies) it also shows how long it's taking and, while
+    the reply streams, its length and speed, and Esc asks it to stop.
+    """
+
+    def __init__(self, theme: Theme, label: str = "working…", live: bool = False):
         self.theme = theme
         self.text = ""
+        self.label = label
+        self.live = live
         self._status: Status | None = Status(Text(label, style=theme.dim), console=console, spinner="dots", spinner_style=theme.accent)
         self._live: Live | None = None
         self._last = 0.0
+        self._started = time.monotonic()
+        self._first_token: float | None = None
+        self.tokens = 0  # streamed pieces: about one token each
+        self._stop = threading.Event()
+        self._done = threading.Event()
+        self._lock = threading.RLock()
+        self._ticker: threading.Thread | None = None
+        self._keys: _Keys | None = None
 
     def __enter__(self):
         if self._status:
             self._status.start()
+        if self.live:
+            self._keys = _Keys()
+            self._ticker = threading.Thread(target=self._tick, name="padou-reply-ticker", daemon=True)
+            self._ticker.start()
         return self
+
+    # ------------------------------------------------------------- state
+
+    def stop_requested(self) -> bool:
+        return self._stop.is_set()
+
+    def progress(self, kind: str) -> None:
+        """The model is thinking or writing a tool call (before any visible text)."""
+        label = PHASES.get(kind)
+        if label and label != self.label:
+            self.label = label
+            self._refresh_status()
 
     def set_label(self, label: str) -> None:
         """Change the text next to the spinner (before the reply starts)."""
-        if self._status is not None:
-            self._status.update(Text(label, style=self.theme.dim))
+        self.label = label
+        self._refresh_status()
+
+    def speed(self) -> float | None:
+        """Tokens per second while the reply streamed (None if too short to tell)."""
+        if self._first_token and self.tokens > 1:
+            seconds = time.monotonic() - self._first_token
+            return self.tokens / seconds if seconds > 0.3 else None
+        return None
+
+    def stats(self) -> str:
+        """'12s · 240 tokens · 21 tok/s', for the line under a streaming reply."""
+        now = time.monotonic()
+        parts = [f"{now - self._started:.0f}s"]
+        if self.tokens:
+            parts.append(f"{self.tokens} tokens")
+            if self._first_token and now - self._first_token > 0.5:
+                parts.append(f"{self.tokens / (now - self._first_token):.0f} tok/s")
+        return " · ".join(parts)
+
+    # ----------------------------------------------------------- drawing
+
+    def _status_text(self) -> Text:
+        if not self.live:
+            return Text(self.label, style=self.theme.dim)
+        return Text(f"{self.label} {time.monotonic() - self._started:.0f}s · esc to stop", style=self.theme.dim)
+
+    def _refresh_status(self) -> None:
+        with self._lock:
+            if self._status is not None:
+                self._status.update(self._status_text())
+
+    def _render(self, footer: bool = True):
+        body = md(self.text)
+        if not (self.live and footer):
+            return body
+        return Group(body, Text(f"  {self.stats()} · esc to stop", style=self.theme.dim))
+
+    def _tick(self) -> None:
+        """Background: watch for Esc and keep the timer moving."""
+        while not self._done.wait(0.1):
+            keys = self._keys.read() if self._keys else ""
+            if is_escape(keys) and not self._stop.is_set():
+                self._stop.set()
+                self.label = "stopping…"
+            with self._lock:
+                if self._status is not None:
+                    self._status.update(self._status_text())
+                elif self._live is not None and time.monotonic() - self._last > 0.25:
+                    self._live.update(self._render())
+                    self._last = time.monotonic()
 
     def feed(self, chunk: str) -> None:
-        self.text += chunk
-        if self._status is not None:
-            self._status.stop()
-            self._status = None
-            self._live = Live(md(self.text), console=console, refresh_per_second=12, vertical_overflow="visible")
-            self._live.start()
-        now = time.monotonic()
-        if self._live and now - self._last > 0.06:
-            self._live.update(md(self.text))
-            self._last = now
+        with self._lock:
+            self.text += chunk
+            self.tokens += 1
+            if self._status is not None:
+                self._status.stop()
+                self._status = None
+                self._first_token = time.monotonic()
+                self._live = Live(self._render(), console=console, refresh_per_second=12, vertical_overflow="visible")
+                self._live.start()
+            now = time.monotonic()
+            if self._live and now - self._last > 0.06:
+                self._live.update(self._render())
+                self._last = now
 
     def __exit__(self, *exc):
-        if self._status is not None:
-            self._status.stop()
-        if self._live is not None:
-            self._live.update(md(self.text))
-            self._live.stop()
+        self._done.set()
+        if self._ticker is not None:
+            self._ticker.join(timeout=1)
+        if self._keys is not None:
+            self._keys.close()
+        with self._lock:
+            if self._status is not None:
+                self._status.stop()
+            if self._live is not None:
+                self._live.update(self._render(footer=False))
+                self._live.stop()
         return False
 
 

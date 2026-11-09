@@ -288,6 +288,12 @@ def llama_info(binary: str = "llama-server") -> LlamaInfo:
     return LlamaInfo(_run([binary, "--help"], timeout=15), _run([binary, "--list-devices"], timeout=15))
 
 
+def context_for(system: System) -> int:
+    """How much conversation the model can keep in mind. 16K tokens when there's RAM for it
+    (16 GB machines report a little under 16), else 8K. Small models need little memory per token."""
+    return 16384 if system.ram_gb >= 14 else 8192
+
+
 def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port: int = 8080, context: int = 8192) -> tuple[str, list[str]]:
     """The llama-server command for this model and this build, plus warnings."""
     warnings = []
@@ -297,7 +303,7 @@ def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port
     argv += ["-c", str(context), "--host", "127.0.0.1", "--port", str(port)]
     if not info.help_text:
         # couldn't ask llama-server; assume a current build
-        argv += ["--jinja", "--reasoning-budget", "0", "--no-mmproj"]
+        argv += ["--jinja", "--reasoning-budget", "0", "--no-mmproj", "--cache-reuse", "256"]
         return " ".join(argv), warnings
     if info.supports("--jinja"):
         argv.append("--jinja")
@@ -309,6 +315,9 @@ def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port
         warnings.append("This build can't switch off 'thinking' (--reasoning-budget); replies may be slow. Update llama.cpp.")
     if info.supports("--no-mmproj"):
         argv.append("--no-mmproj")
+    if info.supports("--cache-reuse"):
+        # reuse cached chunks of the prompt even when something earlier changed: quicker replies
+        argv += ["--cache-reuse", "256"]
     return " ".join(argv), warnings
 
 
