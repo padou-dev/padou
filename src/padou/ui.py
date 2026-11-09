@@ -423,8 +423,12 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
                 body.append(Text(f"  … and {len(entries) - 8} more", style=theme.dim))
         else:
             body.append(Text.assemble(("File, ", ""), (human_size(change.size), theme.dim)))
-        body.append(Text("It goes to the system Trash" + (" (Recycle Bin)" if compat.WINDOWS else "") +
-                         ", so you can restore it from there.", style=theme.dim))
+        if change.elevated:
+            body.append(Text("System files can't go to the Trash: padou keeps a copy first, so /undo can put it back.",
+                             style=theme.dim))
+        else:
+            body.append(Text("It goes to the system Trash" + (" (Recycle Bin)" if compat.WINDOWS else "") +
+                             ", so you can restore it from there.", style=theme.dim))
         for w in change.warnings:
             body.append(Text("⚠ " + w, style=f"bold {theme.warn}"))
     else:
@@ -435,26 +439,36 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
         body.append(Text.assemble(("+ new folder ", theme.ok), (short_path(folder), "")))
     if change.kind != "move":
         body.insert(0, Text(short_path(change.path) + (os.sep if change.is_dir else ""), style="bold"))
+    if change.kind != "delete":  # deletes list their warnings above
+        for w in change.warnings:
+            body.append(Text("⚠ " + w, style=f"bold {theme.warn}"))
+    if change.elevated:
+        body.append(Text("⚠ Needs administrator rights: sudo will ask for your password (padou never sees it).",
+                         style=f"bold {theme.error}"))
     if change.reason:
         body.insert(0, Text(change.reason, style=f"italic {theme.dim}"))
     what = "folder " if change.is_dir else ""
-    title = Text.assemble((f" {icon} ", f"bold {theme.warn}"), (f"{verb} {what}", "bold"), (change.path.name, "bold"), (" ", ""))
-    console.print(Panel(Group(*body), title=title, title_align="left", border_style=theme.warn, padding=(0, 1)))
+    color = theme.error if change.elevated else theme.warn
+    badge = "  admin" if change.admin else ""
+    title = Text.assemble((f" {icon} ", f"bold {color}"), (f"{verb} {what}", "bold"), (change.path.name, "bold"),
+                          (badge, f"bold {color}"), (" ", ""))
+    console.print(Panel(Group(*body), title=title, title_align="left", border_style=color, padding=(0, 1)))
 
 
 def ask_approval(theme: Theme, change) -> bool:
     """Ask the user to approve a change. Folders to delete need their name typed."""
     if getattr(change, "needs_typed_confirmation", False):
         name = change.path.name
+        what = "folder" if change.is_dir else "file"
         try:
-            answer = console.input(Text.assemble(("  To delete this folder, type its name ", theme.warn),
+            answer = console.input(Text.assemble((f"  To delete this {what}, type its name ", theme.warn),
                                                  (name, f"bold {theme.warn}"), (" (or press Enter to keep it): ", theme.warn)))
         except (KeyboardInterrupt, EOFError):
             console.print()
             return False
         if answer.strip() != name:
             if answer.strip():
-                console.print(Text("  That didn't match the folder's name.", style=theme.dim))
+                console.print(Text(f"  That didn't match the {what}'s name.", style=theme.dim))
             return False
         return True
     return confirm("  Apply this change?", default=False)

@@ -1,18 +1,23 @@
-"""Write mode: the only part of padou that can change files.
+"""Edit and admin mode: the only part of padou that can change files.
 
 Every rule about changing files lives here:
 
-* off by default; `/write <folder>` turns it on for that folder (and its
-  subfolders) for this session only, and never for a drive root, your home
-  folder, system folders, hidden folders or secret locations;
+* off by default (read-only). `/mode edit [folder]` allows changes in one
+  folder (and its subfolders) for this session only, never a drive root, your
+  home folder, system folders, hidden folders or secret locations;
+* `/mode admin` allows changes anywhere, still never in secret locations or a
+  few untouchable system areas (/proc, /boot...). Files you can't write
+  yourself (like /etc) go through `sudo`: you type your password into sudo,
+  never into padou. Such files can't go to the Trash, so padou keeps a copy;
 * the model can only *propose* a change. Nothing is touched until you approve
   it in a confirmation box, and the answer defaults to "no";
 * tools: edit_file (replace one exact piece of text), rewrite_file (replace a
   whole file), write_file (create a new file, plus any missing folders),
   move_path (move or rename) and delete_path (to the system Trash);
-* deleting a folder needs you to type its name, and the write folder itself
-  can never be deleted;
-* everything is backed up or recoverable, so `/undo` can put it back.
+* deleting a folder (or, in admin mode, anything) needs you to type its name,
+  and the write folder itself can never be deleted;
+* everything is backed up or recoverable, so `/undo` can put it back, and
+  every change is written to an audit log (changes.log).
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ import difflib
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -50,6 +56,23 @@ def _system_dirs() -> list[Path]:
 
 
 SYSTEM_DIRS = _system_dirs()
+
+
+def _never_dirs() -> list[Path]:
+    """Places padou never changes, not even in admin mode: they hold the running system or the boot loader."""
+    if compat.WINDOWS:
+        return [Path(os.environ[n]) for n in ("SystemRoot",) if os.environ.get(n)]
+    if compat.MACOS:
+        return [Path(p) for p in ("/System", "/dev", "/cores")]
+    return [Path(p) for p in ("/proc", "/sys", "/dev", "/run", "/boot", "/efi")]
+
+
+NEVER_DIRS = _never_dirs()
+
+
+def audit_log() -> Path:
+    """Every change padou made or undid, one JSON line each (worked out at call time, so tests can redirect it)."""
+    return paths.STATE_DIR / "changes.log"
 
 # Folders inside your home that hold settings and app data, like hidden folders do.
 _HOME_APP_FOLDERS = {"appdata", "library"} if (compat.WINDOWS or compat.MACOS) else set()
@@ -92,10 +115,10 @@ def check_write_root(folder: Path, readable: list[Path] | None) -> Path:
     return folder
 
 
-def _target(path_text, cwd: Path, write_roots: list[Path], what: str = "path") -> Path:
-    """Turn the model's path into an absolute path that write mode may touch."""
-    if not write_roots:
-        raise WriteError("write mode is off. The user can turn it on with /write <folder>")
+def _target(path_text, cwd: Path, write_roots: list[Path], what: str = "path", admin: bool = False) -> Path:
+    """Turn the model's path into an absolute path that edit (or admin) mode may touch."""
+    if not write_roots and not admin:
+        raise WriteError("padou is read-only right now. The user can allow changes with /mode edit (or /mode admin)")
     if not isinstance(path_text, str) or not path_text.strip():
         raise WriteError(f"a {what} is required")
     p = Path(os.path.expanduser(path_text.strip()))
@@ -104,9 +127,13 @@ def _target(path_text, cwd: Path, write_roots: list[Path], what: str = "path") -
     if path.is_symlink():
         raise WriteError(f"{path} is a symlink; padou doesn't change links or write through them")
     real = path.resolve()
-    if not any(tools.within(real, r) for r in write_roots):
+    if admin:
+        for never in NEVER_DIRS:
+            if tools.within(real, never):
+                raise WriteError(f"{real} is in {never}, which padou never changes, not even in admin mode")
+    elif not any(tools.within(real, r) for r in write_roots):
         allowed = ", ".join(str(r) for r in write_roots)
-        raise WriteError(f"{real} is outside the write folders ({allowed})")
+        raise WriteError(f"{real} is outside the edit folders ({allowed}). For changes elsewhere the user can use /mode admin")
     if any(part.lower() == ".git" for part in real.parts):
         raise WriteError("padou never changes anything inside .git")
     if tools.is_blocked(real):
@@ -117,6 +144,52 @@ def _target(path_text, cwd: Path, write_roots: list[Path], what: str = "path") -
 def _is_write_root(path: Path, write_roots: list[Path]) -> bool:
     real = path.resolve()
     return any(compat.same_path(str(real), str(r)) for r in write_roots)
+
+
+def _is_essential(path: Path) -> bool:
+    """A drive root, your home folder (or a folder above it), or a top system folder itself:
+    never moved or deleted as a whole, not even in admin mode."""
+    real = path.resolve()
+    home = Path.home().resolve()
+    if real == Path(real.anchor) or tools.within(home, real):
+        return True
+    return any(compat.same_path(str(real), str(d)) for d in SYSTEM_DIRS)
+
+
+def _refuse_essential(path: Path, admin: bool) -> None:
+    if admin and _is_essential(path):
+        raise WriteError(f"{path} is a drive, your home folder or a main system folder; padou never moves or deletes it")
+
+
+def _nearest_existing(path: Path) -> Path:
+    while not path.exists() and path != path.parent:
+        path = path.parent
+    return path
+
+
+def _writable(path: Path, kind: str) -> bool:
+    """Can you (not root) make this change yourself?"""
+    if kind in ("edit", "rewrite"):
+        return os.access(path, os.W_OK)
+    if kind == "create":
+        return os.access(_nearest_existing(path.parent), os.W_OK | os.X_OK)
+    # move or delete: you need to change the folder it's in, and (for folders) everything inside
+    if not os.access(path.parent, os.W_OK | os.X_OK):
+        return False
+    if path.is_dir():
+        for seen, (dirpath, dirnames, filenames) in enumerate(os.walk(path)):
+            if not os.access(dirpath, os.W_OK | os.X_OK):
+                return False
+            if seen > MAX_SCAN_ENTRIES:
+                break
+    return True
+
+
+def _needs_elevation(change: "Change") -> bool:
+    if change.kind == "move":
+        assert change.dest is not None
+        return not (_writable(change.path, "move") and os.access(_nearest_existing(change.dest.parent), os.W_OK | os.X_OK))
+    return not _writable(change.path, change.kind)
 
 
 def _missing_folders(folder: Path) -> list[Path]:
@@ -149,6 +222,8 @@ class Change:
     folders: int = 0
     size: int = 0  # bytes
     warnings: list[str] = field(default_factory=list)
+    admin: bool = False  # proposed in admin mode
+    elevated: bool = False  # needs administrator rights (sudo): a file you can't change yourself
 
     def diff(self, context: int = 3) -> list[str]:
         if self.kind not in ("edit", "rewrite", "create"):
@@ -173,15 +248,15 @@ class Change:
 
     @property
     def needs_typed_confirmation(self) -> bool:
-        """Deleting a folder needs the user to type its name, not just "y"."""
-        return self.kind == "delete" and self.is_dir
+        """Deleting a folder (in admin mode: anything) needs the user to type its name, not just "y"."""
+        return self.kind == "delete" and (self.is_dir or self.admin)
 
     def summary(self) -> str:
         """A few words for /changes and messages to the model."""
         if self.kind == "move":
             return f"moved to {self.dest}"
         if self.kind == "delete":
-            where = f"moved to the {compat.TRASH}"
+            where = "deleted (padou kept a copy for /undo)" if self.elevated else f"moved to the {compat.TRASH}"
             return f"{where} ({_count(self.files, self.folders)}, {human_size(self.size)})" if self.is_dir else where
         added, removed = self.stats
         return {"edit": "edited", "rewrite": "rewritten", "create": "created"}[self.kind] + f" (+{added} −{removed})"
@@ -257,13 +332,32 @@ def _args(raw_args: str | dict) -> dict:
     return args
 
 
-def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path]) -> Change:
+def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path], admin: bool = False) -> Change:
     """Turn a tool call into a Change. Nothing is written or moved yet."""
-    args = _args(raw_args)
+    change = _propose(name, _args(raw_args), cwd, write_roots, admin)
+    if not admin:
+        return change
+    change.admin = True
+    home = Path.home().resolve()
+    change.elevated = _needs_elevation(change)
+    if change.elevated:
+        if compat.WINDOWS:
+            raise WriteError(f"{change.path} needs administrator rights. On Windows, start padou in a terminal opened "
+                             "with 'Run as administrator' to change it")
+        if change.kind == "delete" and change.size > MAX_DELETE_BACKUP_BYTES:
+            raise WriteError(f"{change.path} is too big ({human_size(change.size)}) for padou to keep a copy, and system "
+                             "files can't go to the Trash. Delete it yourself if you're sure")
+    outside = [p for p in (change.path, change.dest) if p is not None and not tools.within(p.resolve(), home)]
+    if outside:
+        change.warnings.insert(0, "outside your home folder")
+    return change
+
+
+def _propose(name: str, args: dict, cwd: Path, write_roots: list[Path], admin: bool) -> Change:
     reason = str(args.get("reason", ""))[:200]
 
     if name == "edit_file":
-        path = _target(args.get("path"), cwd, write_roots)
+        path = _target(args.get("path"), cwd, write_roots, admin=admin)
         old_text, new_text = args.get("old_text"), args.get("new_text")
         if not isinstance(old_text, str) or not isinstance(new_text, str):
             raise WriteError("edit_file needs old_text and new_text")
@@ -283,7 +377,7 @@ def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path])
         return Change("edit", path, content, content.replace(old_text, new_text, 1), reason)
 
     if name == "rewrite_file":
-        path = _target(args.get("path"), cwd, write_roots)
+        path = _target(args.get("path"), cwd, write_roots, admin=admin)
         content = args.get("content")
         if not isinstance(content, str):
             raise WriteError("rewrite_file needs content")
@@ -298,7 +392,7 @@ def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path])
         return Change("rewrite", path, current, content, reason)
 
     if name == "write_file":
-        path = _target(args.get("path"), cwd, write_roots)
+        path = _target(args.get("path"), cwd, write_roots, admin=admin)
         content = args.get("content")
         if not isinstance(content, str):
             raise WriteError("write_file needs content")
@@ -309,15 +403,16 @@ def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path])
         return Change("create", path, "", content, reason, new_folders=_missing_folders(path.parent))
 
     if name == "move_path":
-        source = _target(args.get("source"), cwd, write_roots, "source")
-        dest = _target(args.get("destination"), cwd, write_roots, "destination")
+        source = _target(args.get("source"), cwd, write_roots, "source", admin)
+        dest = _target(args.get("destination"), cwd, write_roots, "destination", admin)
         if not source.exists():
             raise WriteError(f"{source} doesn't exist")
+        _refuse_essential(source, admin)
         if _is_write_root(source, write_roots):
             raise WriteError("the write folder itself can't be moved")
         if dest.exists() and dest.is_dir():
             dest = dest / source.name  # "move a.txt into docs/" means docs/a.txt
-            _target(str(dest), cwd, write_roots)
+            _target(str(dest), cwd, write_roots, admin=admin)
         if dest.exists():
             raise WriteError(f"{dest} already exists; padou never overwrites when moving")
         if source.is_dir() and tools.within(dest.parent.resolve(), source.resolve()):
@@ -326,9 +421,10 @@ def propose(name: str, raw_args: str | dict, cwd: Path, write_roots: list[Path])
                       new_folders=_missing_folders(dest.parent))
 
     if name == "delete_path":
-        path = _target(args.get("path"), cwd, write_roots)
+        path = _target(args.get("path"), cwd, write_roots, admin=admin)
         if not path.exists():
             raise WriteError(f"{path} doesn't exist")
+        _refuse_essential(path, admin)
         if _is_write_root(path, write_roots):
             raise WriteError("the write folder itself can't be deleted; delete things inside it")
         if path.is_dir():
@@ -396,10 +492,134 @@ def move_to_trash(path: Path) -> None:
         raise WriteError(f"couldn't move {path} to the Trash ({exc.strerror or exc}); nothing was deleted") from None
 
 
+# --------------------------------------------------------------------------- #
+# Administrator rights (admin mode, Linux and macOS): sudo, with your password
+# --------------------------------------------------------------------------- #
+
+
+def _run_sudo(argv: list[str]) -> int:
+    """Run one command with sudo, in the open: sudo asks for your password itself, padou never sees it."""
+    return subprocess.run(["sudo", "-p", "  [sudo] password for %u (padou's change): ", "--", *argv]).returncode
+
+
+SUDO_RUNNER = _run_sudo  # tests swap this for a runner without sudo
+
+
+def _sudo(argv: list[str], what: str) -> None:
+    if SUDO_RUNNER is _run_sudo and shutil.which("sudo") is None:
+        raise WriteError("sudo isn't installed, so padou can't change files that need administrator rights")
+    try:
+        code = SUDO_RUNNER(argv)
+    except (OSError, KeyboardInterrupt) as exc:
+        raise WriteError(f"{what} was cancelled ({type(exc).__name__})") from None
+    if code != 0:
+        raise WriteError(f"{what} failed (wrong password, cancelled, or not allowed)")
+
+
+def _temp_copy(session_id: str, text: str) -> Path:
+    """The new content in a file of your own, for sudo to copy into place."""
+    folder = backup_dir(session_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix="new-", suffix=".padou-tmp", dir=folder)
+    with os.fdopen(fd, "wb") as f:
+        f.write(text.encode("utf-8"))
+    os.chmod(tmp, 0o644)
+    return Path(tmp)
+
+
+def _apply_elevated(change: Change, session_id: str, stamp: str) -> "Applied":
+    kind, path = change.kind, change.path
+    if kind in ("edit", "rewrite"):
+        if _read_text(path) != change.old:
+            raise WriteError(f"{path} changed while you were deciding; nothing was written")
+        backup = _backup_path(session_id, path.name)
+        backup.write_text(change.old, encoding="utf-8")
+        tmp = _temp_copy(session_id, change.new)
+        try:
+            _sudo(["cp", str(tmp), str(path)], f"writing {path}")  # cp onto a file keeps its owner and permissions
+        finally:
+            tmp.unlink(missing_ok=True)
+        return Applied(change, backup, stamp)
+
+    if kind == "create":
+        if path.exists():
+            raise WriteError(f"{path} appeared in the meantime; nothing was written")
+        made = [f for f in change.new_folders if not f.exists()]
+        if made:
+            _sudo(["mkdir", "-p", str(path.parent)], f"creating {path.parent}")
+        tmp = _temp_copy(session_id, change.new)
+        try:
+            _sudo(["cp", str(tmp), str(path)], f"creating {path}")
+        finally:
+            tmp.unlink(missing_ok=True)
+        return Applied(change, None, stamp, created_folders=made)
+
+    if kind == "move":
+        assert change.dest is not None
+        if not path.exists():
+            raise WriteError(f"{path} is gone; nothing was moved")
+        if change.dest.exists():
+            raise WriteError(f"{change.dest} appeared in the meantime; nothing was moved")
+        made = [f for f in change.new_folders if not f.exists()]
+        if made:
+            _sudo(["mkdir", "-p", str(change.dest.parent)], f"creating {change.dest.parent}")
+        _sudo(["mv", "-n", str(path), str(change.dest)], f"moving {path}")
+        if path.exists() or not change.dest.exists():
+            raise WriteError(f"moving {path} didn't complete; check both places")
+        return Applied(change, None, stamp, created_folders=made)
+
+    if kind == "delete":
+        if not path.exists():
+            raise WriteError(f"{path} is already gone")
+        backup = _backup_path(session_id, path.name)
+        _sudo(["cp", "-a", str(path), str(backup)], f"backing up {path}")  # system files can't go to the Trash
+        _sudo(["rm", "-rf" if change.is_dir else "-f", str(path)], f"deleting {path}")
+        return Applied(change, backup, stamp)
+
+    raise WriteError(f"unknown change {kind!r}")
+
+
+def _log(action: str, change: Change, ok: bool = True, detail: str = "") -> None:
+    """Append one line to the audit log: every change padou made or undid, with its mode."""
+    entry = {
+        "time": datetime.now().isoformat(timespec="seconds"),
+        "action": action,
+        "kind": change.kind,
+        "path": str(change.path),
+        "mode": "admin" if change.admin else "edit",
+    }
+    if change.dest is not None:
+        entry["dest"] = str(change.dest)
+    if change.elevated:
+        entry["sudo"] = True
+    if not ok:
+        entry["failed"] = detail[:200]
+    try:
+        log = audit_log()
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass  # never let logging stop a change
+
+
 def apply(change: Change, session_id: str) -> Applied:
-    """Make an approved change. Everything is re-checked first, in case things changed meanwhile."""
+    """Make an approved change, and write it to the audit log."""
+    try:
+        applied = _apply(change, session_id)
+    except (WriteError, OSError) as exc:
+        _log("apply", change, ok=False, detail=str(exc))
+        raise
+    _log("apply", change)
+    return applied
+
+
+def _apply(change: Change, session_id: str) -> Applied:
+    """Everything is re-checked first, in case things changed meanwhile."""
     stamp = datetime.now().strftime("%H:%M:%S")
     kind = change.kind
+    if change.elevated:
+        return _apply_elevated(change, session_id, stamp)
 
     if kind in ("edit", "rewrite"):
         if _read_text(change.path) != change.old:
@@ -458,11 +678,62 @@ def _remove_empty(folders: list[Path]) -> None:
             break  # not empty (or already gone): leave it and everything above it
 
 
+def _undo_elevated(applied: Applied, session_id: str) -> str:
+    c = applied.change
+    if c.kind in ("edit", "rewrite"):
+        if applied.backup is None or not applied.backup.exists():
+            raise WriteError("the backup for that change is missing")
+        _sudo(["cp", str(applied.backup), str(c.path)], f"restoring {c.path}")
+        return f"restored {c.path}"
+    if c.kind == "create":
+        if not c.path.exists():
+            return f"{c.path} was already gone"
+        parked = _backup_path(session_id, f"undone-{c.path.name}")
+        _sudo(["mv", "-n", str(c.path), str(parked)], f"removing {c.path}")
+        for f in reversed(applied.created_folders):
+            try:
+                _sudo(["rmdir", str(f)], f"removing the empty folder {f}")
+            except WriteError:
+                break
+        return f"moved the new file {c.path.name} to {parked}"
+    if c.kind == "move":
+        assert c.dest is not None
+        if not c.dest.exists():
+            raise WriteError(f"{c.dest} isn't there any more, so it can't be moved back")
+        if c.path.exists():
+            raise WriteError(f"something new is at {c.path} now; padou won't overwrite it")
+        _sudo(["mv", "-n", str(c.dest), str(c.path)], f"moving {c.dest} back")
+        return f"moved {c.dest.name} back to {c.path}"
+    if c.kind == "delete":
+        if c.path.exists():
+            raise WriteError(f"something new is at {c.path} now; padou won't overwrite it")
+        if applied.backup is None or not applied.backup.exists():
+            raise WriteError("the copy padou kept is missing")
+        _sudo(["cp", "-a", str(applied.backup), str(c.path)], f"restoring {c.path}")
+        return f"restored {c.path}"
+    raise WriteError(f"unknown change {c.kind!r}")
+
+
 def undo(applied: Applied, session_id: str) -> str:
-    """Put things back the way they were. Never deletes your data: a created file is moved to the backups."""
+    """Put things back the way they were, and write it to the audit log."""
+    try:
+        message = _undo(applied, session_id)
+    except (WriteError, OSError) as exc:
+        _log("undo", applied.change, ok=False, detail=str(exc))
+        raise
+    _log("undo", applied.change)
+    return message
+
+
+def _undo(applied: Applied, session_id: str) -> str:
+    """Never deletes your data: a created file is moved to the backups."""
     c = applied.change
     if applied.undone:
         raise WriteError("that change was already undone")
+    if c.elevated:
+        message = _undo_elevated(applied, session_id)
+        applied.undone = True
+        return message
 
     if c.kind in ("edit", "rewrite"):
         if applied.backup is None or not applied.backup.exists():

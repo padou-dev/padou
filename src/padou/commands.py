@@ -306,7 +306,7 @@ def cmd_tools(app: "App", arg: str):
         for c in tools.APPROVED_COMMANDS.values():
             rows.append([f"run: {c.name}", c.description + (f"  [{c.arg_name}]" if c.arg_name else "")])
     ui.table(app.theme, "Read-only tools", ["Tool", "What it does"], rows, styles=[app.theme.accent, ""])
-    if app.write_roots:
+    if app.mode != "read":
         write_rows = [
             ["edit_file", "Change one exact piece of text in a file"],
             ["rewrite_file", "Replace a whole file (you see the full diff)"],
@@ -314,7 +314,7 @@ def cmd_tools(app: "App", arg: str):
             ["move_path", "Move or rename a file or folder (never overwrites)"],
             ["delete_path", f"Move a file or folder to the {compat.TRASH} (folders: you type the name)"],
         ]
-        ui.table(app.theme, "Write tools (write mode is on; you approve every change)", ["Tool", "What it does"], write_rows,
+        ui.table(app.theme, f"Change tools ({app.mode} mode is on; you approve every change)", ["Tool", "What it does"], write_rows,
                  styles=[app.theme.warn, ""])
     ui.info(app.theme, "Blocked for safety: SSH and GPG keys, keychains and credential stores, password stores, browser profiles, .env files, private keys.")
 
@@ -443,44 +443,133 @@ def cmd_folder(app: "App", arg: str):
     ui.error(th, "Usage: /folder [list | add <path> [--always] | remove <n> | anywhere | restrict]")
 
 
-def cmd_write(app: "App", arg: str):
+MODE_HELP = {
+    "read": "padou reads files and runs approved read-only commands. It can't change anything.",
+    "edit": "padou may change files in one folder and its subfolders. Every change needs your yes.",
+    "admin": "padou may change files anywhere (never secrets). System files go through sudo. Deletes need the name typed.",
+}
+
+
+def _mode_table(app: "App") -> None:
+    th = app.theme
+    rows = []
+    for name, text in MODE_HELP.items():
+        mark = "●" if app.mode == name else " "
+        extra = ""
+        if name == "edit" and app.mode == "edit":
+            extra = "  (" + ", ".join(ui.short_path(r) for r in app.write_roots) + ")"
+        rows.append([mark, Text(name, style=f"bold {th.error if name == 'admin' else th.warn if name == 'edit' else th.accent}"),
+                     text + extra])
+    ui.table(th, "Modes", ["", "Mode", "What padou may do"], rows, styles=[th.accent, "", ""])
+    ui.info(th, "/mode read · /mode edit [folder] · /mode admin   ·   Shift+Tab switches read ↔ edit")
+
+
+def _edit_folder(app: "App", folder_text: str):
+    """The folder for edit mode, checked; or None after explaining why not."""
     import os
     from pathlib import Path
 
     from padou import writes
 
     th = app.theme
-    arg = arg.strip()
-    if not arg:
-        if not app.write_roots:
-            ui.info(th, "Write mode is off: padou can't change any file.")
-            ui.info(th, "Turn it on for one folder (and its subfolders), this session only: /write <folder>")
-        else:
-            rows = [[str(i), ui.short_path(r)] for i, r in enumerate(app.write_roots, 1)]
-            ui.table(th, "padou may change files in", ["#", "Folder"], rows, styles=[th.warn, ""])
-            ui.info(th, "Every change is shown first and needs your yes. /undo reverts · /write off stops")
-        return
-    if arg.lower() in ("off", "stop", "no"):
-        app.write_roots.clear()
-        app.refresh_system_prompt()
-        ui.success(th, "Write mode is off. padou is read-only again.")
-        return
-    p = Path(os.path.expanduser(arg))
+    p = Path(os.path.expanduser(folder_text or "."))
     if not p.is_absolute():
         p = app.cwd / p
+    readable = app._folders_before_admin if app.mode == "admin" else app.folders
     try:
-        folder = writes.check_write_root(p, app.folders)
+        return writes.check_write_root(p, readable)
     except writes.WriteError as exc:
         ui.error(th, str(exc))
+        ui.info(th, "Start padou in a project folder, or use /mode edit <folder>. /mode admin allows changes anywhere.")
+        return None
+
+
+def _edit_on(app: "App", folder) -> None:
+    th = app.theme
+    app.set_mode("edit", folder)
+    ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Edit mode for ", "bold"),
+                                   (", ".join(ui.short_path(r) for r in app.write_roots), f"bold {th.warn}"),
+                                   (" (and subfolders), this session only.", "")))
+    ui.info(th, f"padou can edit, create, move and delete (to the {compat.TRASH}) files there. Every change is shown "
+                "first and needs your yes. /undo reverts · /mode read stops")
+
+
+def _admin_on(app: "App") -> None:
+    from rich.console import Group
+    from rich.panel import Panel
+
+    th = app.theme
+    if app.mode == "admin":
+        ui.info(th, "Admin mode is already on. /mode read switches it off.")
         return
-    if folder not in app.write_roots:
-        app.write_roots.append(folder)
-    app.refresh_system_prompt()
-    ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Write mode on for ", "bold"), (ui.short_path(folder), f"bold {th.warn}"),
-                                   (" (and its subfolders), this session only.", "")))
-    ui.info(th, f"padou can edit, create, move and delete (to the {compat.TRASH}) files there. It can't run anything.")
-    ui.info(th, "Every change is shown in a box first and needs your yes (deleting a folder: you type its name).")
-    ui.info(th, "Backups are kept: /undo, /changes. Stop with /write off.")
+    body = Group(
+        Text("padou may change files anywhere on this computer, for this session:", style="bold"),
+        Text("  • edit, create, move and delete, outside the folder you started in too"),
+        Text("  • system files (like /etc) through sudo: you type your password into sudo, never into padou"),
+        Text("  • every change still shows first and needs your yes; deletes need the name typed"),
+        Text("  • /undo reverts changes, and each one is written to the audit log"),
+        Text("Never, not even here: secret locations (keys, passwords, browser data), /proc, /sys, /dev, /boot.",
+             style=th.dim),
+        Text("A small model can be confidently wrong. Read every change before you approve it.", style=f"bold {th.error}"),
+    )
+    ui.console.print(Panel(body, title=Text(" ⚠ Admin mode ", style=f"bold {th.error}"), title_align="left",
+                           border_style=th.error, padding=(0, 1)))
+    try:
+        answer = ui.console.input(Text.assemble(("  Type ", th.error), ("admin", f"bold {th.error}"),
+                                                (" to switch it on (or press Enter to cancel): ", th.error)))
+    except (KeyboardInterrupt, EOFError):
+        ui.console.print()
+        answer = ""
+    if answer.strip().lower() != "admin":
+        ui.info(th, "  Cancelled: the mode didn't change.")
+        return
+    app.set_mode("admin")
+    ui.console.print(Text("⚠ Admin mode on for this session. /mode read (or Shift+Tab) switches it off.",
+                          style=f"bold {th.error}"))
+
+
+def cmd_mode(app: "App", arg: str):
+    """read-only, edit (one folder) or admin (anywhere)."""
+    th = app.theme
+    action, _, rest = arg.strip().partition(" ")
+    action = action.lower()
+    if not action:
+        _mode_table(app)
+        return
+    if action in ("read", "read-only", "readonly", "off"):
+        was = app.mode
+        app.set_mode("read")
+        ui.success(th, "Read-only: padou can't change any file." if was != "read" else "Already read-only.")
+        return
+    if action == "edit":
+        folder = _edit_folder(app, rest.strip())
+        if folder is not None:
+            _edit_on(app, folder)
+        return
+    if action == "admin":
+        _admin_on(app)
+        return
+    ui.error(th, "Usage: /mode [read | edit [folder] | admin]")
+
+
+def cycle_mode(app: "App") -> None:
+    """Shift+Tab: read-only <-> edit in the start folder. Admin mode is never one keypress away."""
+    if app.mode != "read":
+        app.set_mode("read")
+        ui.success(app.theme, "Read-only (Shift+Tab: edit mode).")
+        return
+    folder = _edit_folder(app, "")
+    if folder is not None:
+        _edit_on(app, folder)
+
+
+def cmd_write(app: "App", arg: str):
+    """Old name: /write is now /mode edit."""
+    a = arg.strip()
+    ui.info(app.theme, "/write is now /mode edit (and /mode read to stop).")
+    if a.lower() in ("off", "stop", "no"):
+        return cmd_mode(app, "read")
+    return cmd_mode(app, f"edit {a}" if a else "")
 
 
 def cmd_undo(app: "App", arg: str):
@@ -511,7 +600,10 @@ def cmd_changes(app: "App", arg: str):
         rows.append([str(i), a.when, ui.short_path(a.change.path), a.change.summary(), state])
     ui.table(app.theme, "Changes this session", ["#", "Time", "File or folder", "What happened", ""], rows,
              styles=[app.theme.dim, app.theme.dim, "bold", "", ""])
+    from padou import writes
+
     ui.info(app.theme, f"Backups: {ui.short_path(writes_backup_dir(app))}  ·  /undo reverts the last one")
+    ui.info(app.theme, f"Every change padou makes is also listed in {ui.short_path(writes.audit_log())}")
 
 
 def writes_backup_dir(app: "App"):
@@ -681,7 +773,8 @@ COMMANDS: dict[str, Command] = {
     "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),
     "tools": Command(cmd_tools, "List the tools padou may use"),
     "folder": Command(cmd_folder, "Folders padou may read: list, add, remove", "[add <path>]"),
-    "write": Command(cmd_write, "Let padou change files in one folder (you approve each change)", "[<folder>|off]"),
+    "mode": Command(cmd_mode, "Read-only, edit (one folder) or admin (anywhere); Shift+Tab: read ↔ edit", "[read|edit|admin]"),
+    "write": Command(cmd_write, "Old name of /mode edit"),
     "undo": Command(cmd_undo, "Undo padou's last change (edit, new file, move or delete)"),
     "changes": Command(cmd_changes, "List everything padou changed this session"),
     "server": Command(cmd_server, "Model server: status, stop, restart, log", "[stop|restart|log]"),
@@ -697,7 +790,7 @@ COMMANDS: dict[str, Command] = {
     "quit": Command(cmd_exit, "Quit padou"),
     "folders": Command(cmd_folder, "Alias of /folder"),
 }
-ALIASES = {"quit", "folders"}  # still work when typed, but hidden from /help and Tab
+ALIASES = {"quit", "folders", "write"}  # still work when typed, but hidden from /help and Tab
 
 
 def dispatch(app: "App", line: str) -> str | None:

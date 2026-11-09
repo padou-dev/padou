@@ -28,16 +28,17 @@ def parse_args(argv=None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-NOTICE_FILE = paths.DATA_DIR / "notice-v3-accepted"  # bump the version when the notice changes
+NOTICE_FILE = paths.DATA_DIR / "notice-v4-accepted"  # bump the version when the notice changes
 
 NOTICE = """padou is free, open-source software provided AS IS, without warranty of any kind.
 
 • AI answers can be wrong, even when they sound confident. Review every
   command before you run it: you are responsible for what you run.
 • Don't rely on padou for medical, legal, financial or safety decisions.
-• padou is read-only unless you turn on write mode (/write). There it
-  can edit, move and delete files (to the Trash or Recycle Bin), only
-  with your approval, and each change you approve is your responsibility.
+• padou is read-only unless you switch modes (/mode). In edit mode it
+  can change files in one folder; in admin mode anywhere, including system
+  files through sudo. Only with your approval, and each change you
+  approve is your responsibility.
 • Its safety limits are safeguards, not guarantees.
 • Models and model servers are third-party software with their own licences.
 

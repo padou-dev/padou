@@ -136,7 +136,7 @@ def test_targets_outside_or_dangerous_are_refused(tmp_path, root):
     for args in cases:
         with pytest.raises(WriteError):
             writes.propose("edit_file", args, root, [root])
-    with pytest.raises(WriteError, match="write mode is off"):
+    with pytest.raises(WriteError, match="read-only right now"):
         writes.propose("edit_file", cases[0], root, [])
 
 

@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-Faster and more responsive on laptops.
+Faster on laptops, and a new admin mode.
+
+- `/mode read | edit | admin` replaces `/write` (which still works, as the old name of `/mode edit`). `Shift+Tab` switches between read-only and edit
+- Admin mode: change files anywhere, outside the start folder too. System files go through `sudo` (you type your password into sudo, never into padou), get a copy kept for `/undo` instead of the Trash, and show a red warning. Deletes need the name typed, also for files. Never secrets, `/proc`, `/sys`, `/dev`, `/run`, `/boot`, your home folder or a main system folder as a whole
+- An audit log: every change and undo goes to `changes.log` in padou's state folder
+- The status line shows `read-only`, `✎ edit: <folder>` or `⚠ ADMIN`
 
 - Live progress while padou works: elapsed time, then tokens and speed as the reply streams
 - `Esc` stops a reply and keeps what was written so far (`Ctrl+C` still cancels it completely)

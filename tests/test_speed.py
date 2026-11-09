@@ -136,7 +136,7 @@ def test_status_line_shows_thinking():
     a = object.__new__(app.App)
     a.last_speed, a.ctx_used, a.ctx_size, a.model_label = 0, 0, 0, "Qwen3.5 4B"
     a.cfg = SimpleNamespace(ui=SimpleNamespace(animation=False))
-    a.update_available, a.write_roots, a.thinking = None, [], True
+    a.update_available, a.write_roots, a.thinking, a.mode = None, [], True, "read"
     assert "thinking" in "".join(t for _, t in a._toolbar())
 
 

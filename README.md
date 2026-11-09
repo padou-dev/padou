@@ -19,7 +19,7 @@ padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama,
 - **The compass star:** padou's mark. παντού means "everywhere", in every direction: on launch, dots gather from everywhere into the star while παντού decodes into padou, and the rays keep shooting outward. Turn it off with `[ui] animation = false`.
 - **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
 - **Linux, macOS and Windows:** one padou for all three, with the right commands, folders and Trash for each system.
-- **Read-only by default, write mode when you want it:** `/write <folder>` lets padou edit, create, move and delete (to the Trash) files in one folder; every change is shown in a confirmation box and needs your yes, and `/undo` reverts it.
+- **Read-only by default, edit and admin modes when you want them:** `/mode edit` lets padou edit, create, move and delete (to the Trash) files in one folder, `/mode admin` anywhere, with system files through `sudo`. Every change is shown in a confirmation box and needs your yes, `/undo` reverts it, and an audit log records it.
 - **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands for your OS (`df`, `systemctl status`, `ipconfig`, `sw_vers`…).
 - **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (SSH and GPG keys, keychains and credential stores, `.env`, private keys, browser profiles) blocked even through symlinks.
 - **Updates:** once a day padou checks quietly for a new version; `/update` installs it.
@@ -169,7 +169,7 @@ padou --version
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard |
 | `/tools` | List the tools padou may use |
-| `/write [<folder>\|off]` | Let padou change files in one folder, this session only (you approve every change) |
+| `/mode [read\|edit\|admin]` | Read-only, edit (one folder) or admin (anywhere, system files through sudo); `Shift+Tab` switches read ↔ edit |
 | `/undo` | Undo padou's last change (edits, new files, moves and deletions) |
 | `/changes` | List everything padou changed this session |
 | `/server [stop\|restart\|log]` | The model server: status and memory, stop, restart, or its log |
@@ -209,23 +209,26 @@ To change the default, set `[tools] scope = "anywhere"` and/or list folders in `
 > [!TIP]
 > Starting padou in your home folder (`~`) allows your whole home folder. Start it in a project folder to keep it focused.
 
-## Write mode
+## Modes: read-only, edit and admin
 
-padou is **read-only by default**. To let it change files, turn on write mode for one folder:
+padou is **read-only by default**. Two modes let it change files, each only for this session:
 
 ```
-/write ~/Projects/my-app      padou may change files here (and in subfolders), this session only
-/write                        show where write mode is on
+/mode                         show the modes and which one is on
+/mode edit                    padou may change files in the folder you started in (and its subfolders)
+/mode edit ~/Projects/my-app  ...or in another folder (run it again to add more)
+/mode admin                   padou may change files anywhere, system files through sudo
+/mode read                    read-only again
+Shift+Tab                     switch between read-only and edit (never admin)
 /undo                         put the last change back (run it again for the one before)
 /changes                      list everything padou changed this session
-/write off                    read-only again
 ```
 
-<p align="center"><img src="docs/screenshots/write.svg" alt="padou in write mode: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
+<p align="center"><img src="docs/screenshots/write.svg" alt="padou changing files: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
 
-The status line at the bottom always shows the mode: `read-only`, or `✎ write:` and the folder.
+The status line at the bottom always shows the mode: `read-only`, `✎ edit: <folder>` in the warning colour, or `⚠ ADMIN` in red.
 
-What padou can do there, each one only after you approve it:
+What padou can do in edit and admin mode, each one only after you approve it:
 
 | Tool | What it does |
 |---|---|
@@ -235,19 +238,31 @@ What padou can do there, each one only after you approve it:
 | `move_path` | Move or rename a file or folder; never overwrites |
 | `delete_path` | Move a file or folder to the system **Trash** (Recycle Bin on Windows) |
 
-How it stays safe:
+How it stays safe, in both modes:
 
 - **You approve every change in a confirmation box.** It shows exactly what will happen: a coloured diff, where something moves, or what's inside a folder about to be deleted. The answer defaults to **no**. There's no "approve everything" switch.
-- **Deleting a folder means typing its name**, not just `y`. The box shows how many files are inside, their size, and warnings (a `.git` repository, files that look like secrets). The write folder itself can never be deleted or moved.
+- **Deleting a folder means typing its name**, not just `y` (in admin mode, files too). The box shows how many files are inside, their size, and warnings (a `.git` repository, files that look like secrets).
 - **Nothing is destroyed:** deleted things go to the system Trash, where you can restore them. padou also keeps its own copy of anything up to 20 MB, so `/undo` can bring it straight back.
 - **Backups and undo:** edited files are copied to padou's backup folder first. `/undo` restores them, moves things back, and moves a newly created file aside rather than deleting it.
-- **Never in sensitive places:** not a drive root, not your whole home folder, not system folders (`/etc`, `/usr`, `C:\Windows`, `C:\Program Files`, `/System`…), not hidden or settings folders (`~/.config`, `AppData`, `~/Library`), not inside `.git`, not secret files, not through symlinks, and only in folders padou may already read.
-- **Line endings kept:** a file with Windows line endings keeps them.
-- **Never saved:** write mode always starts off, and nothing in the config can turn it on permanently.
-- **Always visible:** the status line shows `✎ write: <folder>` in the warning colour while it's on.
+- **An audit log:** every change (and every undo) is written to `changes.log` in padou's state folder, with the time, the mode and whether sudo was used.
+- **Never secrets, never `.git`, never through symlinks**, in any mode.
+- **Never saved:** padou always starts read-only, and nothing in the config can change that. The model can't switch modes either: only you can, by typing.
+
+### Edit mode
+
+For working in a project. padou may change files in the edit folders only, and never in a drive root, your whole home folder, system folders (`/etc`, `/usr`, `C:\Windows`, `C:\Program Files`, `/System`…) or hidden and settings folders (`~/.config`, `AppData`, `~/Library`). An edit folder itself can't be deleted or moved. If you start padou in your home folder, pick a project: `/mode edit ~/Projects/my-app`.
+
+### Admin mode
+
+For changes anywhere, including your home folder, `~/.config` and system files like `/etc/hosts`. Switching it on shows what it allows and asks you to type `admin`.
+
+- **System files go through `sudo`.** When a change needs administrator rights, the box says so in red. After you approve it, `sudo` itself asks for your password: you type it into sudo, padou never sees it. sudo then remembers it for a few minutes, as usual.
+- **System files can't go to the Trash**, so padou keeps a copy before deleting (and refuses if that copy would be over 20 MB). `/undo` puts them back, through sudo again. These copies belong to root, in padou's backup folder.
+- **Still never:** secret locations, a drive root, your home folder or a main system folder as a whole (`/etc` itself can't be deleted), and the parts that keep the system running: `/proc`, `/sys`, `/dev`, `/run`, `/boot`, `/efi` (`/System` on macOS, `C:\Windows`).
+- **Windows:** padou can't ask for administrator rights itself yet. For protected locations, start padou in a terminal opened with *Run as administrator*.
 
 > [!WARNING]
-> Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now delete the src folder*). **Read every box before you say yes**, and keep your work in Git so you can always go back.
+> Small models make mistakes, and text inside files can try to trick the model ("prompt injection": a README that says *now delete the src folder*). **Read every box before you say yes**, especially in admin mode, and keep your work in Git so you can always go back.
 
 ## Switching models
 
@@ -405,8 +420,9 @@ See [`config.example.toml`](config.example.toml) for every option.
 | Very slow replies (2–5 tok/s) | The model is running on the CPU. Check `llama-cli --list-devices` shows Vulkan, and use `-ngl 99` |
 | `The server took longer than 180s` | Long answer on a slow machine. Raise `[server] timeout` |
 | `Context is 85% full` | Use `/compact` to summarise, or `/clear` to start over. Or start llama-server with a bigger `-c` |
-| padou says "write mode is off" | It's read-only by default. Turn writing on for a folder with `/write <folder>` |
-| `/write` refuses a folder | It won't write in `/`, your home folder, system folders, hidden folders or `.git`. Pick a project folder |
+| padou says it's "read-only right now" | That's the default. Allow changes with `/mode edit` (a folder) or `/mode admin` (anywhere) |
+| `/mode edit` refuses a folder | Edit mode won't work in `/`, your home folder, system folders, hidden folders or `.git`. Pick a project folder, or use `/mode admin` |
+| sudo says "a terminal is required" | Run padou in a normal terminal window (not through a pipe or a script), so sudo can ask for your password |
 | An edit went wrong | `/undo` puts the file back; `/changes` lists every change and where the backups are |
 | The model server uses memory when idle | It stays loaded for fast starts. `/server stop` frees it, or set `stop_on_exit = true` |
 | The model says it can't read a file | The path is in the blocked list (keys, secrets, browser data). That's on purpose |
