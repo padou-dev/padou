@@ -14,7 +14,8 @@ from rich.text import Text
 
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="padou", description="A lightweight, local-first AI assistant for your terminal.")
-    p.add_argument("command", nargs="?", choices=["chat", "doctor", "setup"], default="chat", help="chat (default), doctor or setup")
+    p.add_argument("command", nargs="?", choices=["chat", "doctor", "setup", "bench"], default="chat",
+                   help="chat (default), doctor, setup, or bench (score the current model on test questions)")
     p.add_argument("-V", "--version", action="version", version=f"padou {__version__} · παντού")
     p.add_argument("-c", "--continue", dest="resume_last", action="store_true", help="continue the most recent session")
     p.add_argument("--compact", action="store_true", help="one-line banner")
@@ -120,6 +121,10 @@ def main(argv=None) -> int:
     try:
         if args.command == "doctor":
             return 0 if doctor.run(cfg, th, client) else 1
+        if args.command == "bench":
+            from padou import bench
+
+            return bench.run(cfg, client, th)
 
         cwd = Path.cwd()
         app = App(cfg, th, client, cwd)

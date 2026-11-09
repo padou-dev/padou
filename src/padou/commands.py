@@ -30,10 +30,31 @@ class Command:
     usage: str = ""
 
 
+HELP_GROUPS = [
+    ("Chat", ["clear", "compact", "resume", "copy", "think", "web"]),
+    ("Files and modes", ["mode", "folder", "undo"]),
+    ("Model", ["models", "server"]),
+    ("padou", ["status", "doctor", "update", "help", "exit"]),
+]
+
+
 def cmd_help(app: "App", arg: str):
-    rows = [[f"/{name}" + (f" {c.usage}" if c.usage else ""), c.help] for name, c in COMMANDS.items() if name not in ALIASES]
-    ui.table(app.theme, "Commands", ["Command", "What it does"], rows, styles=[app.theme.accent, ""])
-    ui.info(app.theme, "Keys: Enter send · Alt+Enter new line · ↑/↓ history · Tab complete · Ctrl+C cancel · Ctrl+D quit")
+    from rich.table import Table
+
+    th = app.theme
+    t = Table(title="Commands", title_style=f"bold {th.accent}", border_style=th.dim, header_style="bold")
+    t.add_column("", style=f"bold {th.dim}")
+    t.add_column("Command", style=th.accent)
+    t.add_column("What it does")
+    for group, names in HELP_GROUPS:
+        for i, name in enumerate(names):
+            c = COMMANDS[name]
+            t.add_row(Text(group if i == 0 else ""), Text(f"/{name}" + (f" {c.usage}" if c.usage else "")), Text(c.help))
+        t.add_section()
+    ui.console.print(t)
+    ui.info(th, "Keys: Enter send · Alt+Enter new line · ↑/↓ history · Tab complete · Shift+Tab mode · Esc stop a reply · "
+                "Ctrl+C cancel · Ctrl+D quit")
+    ui.info(th, "Also: /tools (every tool padou may use), /changes (= /undo list), /system, /screenshot.")
     ui.info(app.theme, "Answers can be wrong: review commands before you run them. See DISCLAIMER.md.")
 
 
@@ -583,8 +604,37 @@ def cmd_write(app: "App", arg: str):
     return cmd_mode(app, f"edit {a}" if a else "")
 
 
+def cmd_web(app: "App", arg: str):
+    """Web search for this session: off by default."""
+    th, cfg = app.theme, app.cfg.web
+    action = arg.strip().lower()
+    names = {"duckduckgo": "DuckDuckGo", "searxng": "your SearXNG", "brave": "Brave Search"}
+    provider = names.get(cfg.provider, cfg.provider)
+    if action in ("", "status"):
+        state = "on" if app.web_on else "off"
+        ui.info(th, f"Web search is {state} (provider: {provider}). /web on · /web off. Change the provider under [web] in the config.")
+        return
+    if action not in ("on", "off"):
+        ui.error(th, "Usage: /web [on|off]")
+        return
+    if not app.cfg.tools.enabled:
+        ui.error(th, "Tools are switched off ([tools] enabled = false), so padou can't search either.")
+        return
+    app.web_on = action == "on"
+    app.refresh_system_prompt()
+    if app.web_on:
+        ui.success(th, f"Web search on for this session ({provider}). /web off switches it off.")
+        ui.info(th, "Only the search words go to the search provider; pages are loaded straight from their sites. "
+                    "Your files and this conversation never leave this computer.")
+    else:
+        ui.success(th, "Web search off: padou is fully offline again.")
+
+
 def cmd_undo(app: "App", arg: str):
     from padou import writes
+
+    if arg.strip().lower() in ("list", "ls", "all"):
+        return cmd_changes(app, "")
 
     pending = [a for a in app.changes if not a.undone]
     if not pending:
@@ -786,13 +836,14 @@ COMMANDS: dict[str, Command] = {
     "folder": Command(cmd_folder, "Folders padou may read: list, add, remove", "[add <path>]"),
     "mode": Command(cmd_mode, "Read-only, edit (one folder) or admin (anywhere); Shift+Tab: read ↔ edit", "[read|edit|admin]"),
     "write": Command(cmd_write, "Old name of /mode edit"),
-    "undo": Command(cmd_undo, "Undo padou's last change (edit, new file, move or delete)"),
-    "changes": Command(cmd_changes, "List everything padou changed this session"),
+    "undo": Command(cmd_undo, "Undo padou's last change; /undo list shows them all", "[list]"),
+    "changes": Command(cmd_changes, "List everything padou changed this session (= /undo list)"),
     "server": Command(cmd_server, "Model server: status, stop, restart, log", "[stop|restart|log]"),
     "update": Command(cmd_update, "Check for a newer padou and install it"),
     "resume": Command(cmd_resume, "List saved sessions, or continue one", "[n]"),
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),
     "think": Command(cmd_think, "Let the model reason before answering (slower, smarter)", "[on|off]"),
+    "web": Command(cmd_web, "Let padou search the web this session (off by default)", "[on|off]"),
     "doctor": Command(cmd_doctor, "Check server, model and config"),
     "system": Command(cmd_system, "Show the system prompt"),
     "screenshot": Command(cmd_screenshot, "Save the screen as an SVG image", "[name]"),
@@ -801,7 +852,7 @@ COMMANDS: dict[str, Command] = {
     "quit": Command(cmd_exit, "Quit padou"),
     "folders": Command(cmd_folder, "Alias of /folder"),
 }
-ALIASES = {"quit", "folders", "write"}  # still work when typed, but hidden from /help and Tab
+ALIASES = {"quit", "folders", "write", "changes", "tools", "system", "screenshot"}  # still work when typed, but hidden from /help and Tab
 
 
 def dispatch(app: "App", line: str) -> str | None:

@@ -168,20 +168,19 @@ padou --version
 | `/models [n\|remove n]` | List models, switch to one (downloads it if needed), or remove a downloaded one |
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard |
-| `/tools` | List the tools padou may use |
 | `/mode [read\|edit\|admin]` | Read-only, edit (one folder) or admin (anywhere, system files through sudo); `Shift+Tab` switches read ↔ edit |
-| `/undo` | Undo padou's last change (edits, new files, moves and deletions) |
-| `/changes` | List everything padou changed this session |
+| `/undo [list]` | Undo padou's last change (edits, new files, moves and deletions); `/undo list` shows every change this session |
 | `/server [stop\|restart\|log]` | The model server: status and memory, stop, restart, or its log |
 | `/update` | Check for a newer padou and install it |
 | `/folder [add <path>]` | Folders padou may read: list, `add <path> [--always]`, `remove <n>`, `anywhere`, `restrict` |
 | `/resume [n]` | List saved sessions, or continue one |
 | `/compact` | Summarise the conversation to free up context |
 | `/think [on\|off]` | Let the model reason before answering: smarter on hard questions, much slower (this session) |
+| `/web [on\|off]` | Let padou search the web, this session only (off by default; see [Web search](#web-search)) |
 | `/doctor` | Run the checks from inside padou |
-| `/system` | Show the system prompt |
-| `/screenshot [name]` | Save the screen as an SVG image (in `~/Pictures/padou/`) |
 | `/exit`, `/quit` | Quit (also `Ctrl+D`, or `Ctrl+C` twice) |
+
+`/help` shows these in groups. A few more work when typed, but stay out of the way: `/tools` (every tool padou may use), `/changes` (same as `/undo list`), `/system` (the system prompt) and `/screenshot [name]` (save the screen as an SVG in `~/Pictures/padou/`).
 
 ### Keys
 
@@ -320,7 +319,7 @@ Turn the daily check off with `[updates] check = false` (or `PADOU_NO_UPDATE_CHE
 
 ## Tools
 
-padou's model can only **ask** to use a tool; padou's own code decides whether the request is allowed. Every call is shown on screen (the write tools are described in [Write mode](#write-mode)):
+padou's model can only **ask** to use a tool; padou's own code decides whether the request is allowed. Every call is shown on screen (the tools that change files are described in [Modes](#modes-read-only-edit-and-admin)):
 
 ```
 ● Run journalctl --no-pager -n 100 -u NetworkManager
@@ -332,6 +331,7 @@ padou's model can only **ask** to use a tool; padou's own code decides whether t
 | `read_file` | Read a text file, with line numbers |
 | `list_dir` | List a folder |
 | `search` | Case-insensitive text or regex search in a file or folder (skips `.git`, `.venv`, `node_modules`) |
+| `man_page` | Read a program's manual installed on your computer (`man`; `Get-Help` on Windows), or just the parts about one option, so answers about options come from the real documentation |
 | `run_command` | One entry from the approved list below |
 
 Approved commands, per system (type `/tools` to see yours):
@@ -346,7 +346,38 @@ Approved commands, per system (type `/tools` to see yours):
 On Windows a few of these are short, fixed PowerShell one-liners written into padou; the model can never add to them.
 
 > [!IMPORTANT]
-> **The safety rules:** commands are run as argument lists with `shell=False`, so `;`, `&&` and `$(...)` mean nothing. Arguments must match `^[A-Za-z0-9@._:+-]{1,64}$` and can't start with `-`. No `sudo`, ever. Tool output is capped (8000 characters by default) so logs can't flood the context.
+> **The safety rules:** commands are run as argument lists with `shell=False`, so `;`, `&&` and `$(...)` mean nothing. Arguments must match `^[A-Za-z0-9@._:+-]{1,64}$` and can't start with `-`. No `sudo` in these tools. Tool output is capped (8000 characters by default) so logs can't flood the context: long output keeps its start and its end (where results and errors usually are) with a note about what was skipped.
+
+### When things go wrong
+
+Small models sometimes fumble a tool call. padou helps them recover instead of failing: a broken call gets an error with an example of a correct one; a call written as text (`<tool_call>…</tool_call>`) is run as a real call; and the same failing call is stopped after two tries, so the model explains the problem instead of looping. When the conversation fills about 80% of the model's memory, padou summarises the older part by itself and keeps your last exchange word for word (`auto_compact` under `[chat]`).
+
+## Web search
+
+padou is offline by default. `/web on` lets it search the web for the rest of the session, and the status line shows `web` while it's on. `/web off` switches it off again.
+
+- **What leaves your computer:** only the search words, sent to the search provider, and requests for the pages padou reads, sent straight to those sites. Never your files or the conversation.
+- **When it's used:** for anything that may have changed since the model was trained: new versions, releases, defaults, news. For questions about your own computer, padou uses its local tools first.
+- **What you see:** every search and page shows up like any other tool call (`● Web search 'ubuntu 26.04 default terminal'`).
+- **Never the local network:** padou won't read pages on your computer or your home network (`localhost`, `192.168.x.x`, `*.local`).
+
+Providers, under `[web]` in the config:
+
+| `provider` | Needs | Notes |
+|---|---|---|
+| `duckduckgo` (default) | nothing | Reads DuckDuckGo's plain results page. It isn't an official API, so it can be blocked for a while or break when DuckDuckGo changes its page; padou then says so |
+| `searxng` | `url` of your own [SearXNG](https://docs.searxng.org/) | Private and reliable, for example on a home server. Switch on its JSON output (`search: formats: [html, json]` in `settings.yml`) |
+| `brave` | `api_key` for the [Brave Search API](https://brave.com/search/api/) | Reliable; a small free monthly credit, then paid |
+
+To start every session with web search on, set `enabled = true` under `[web]`.
+
+## Testing a model: `padou bench`
+
+```bash
+padou bench
+```
+
+It asks the model 15 fixed questions in a practice folder with known files (a README, a config, notes, a log), lets it use padou's read-only tools, and scores each answer: did it use the right tool, and is the answer right? It also includes a few traps, like a file that doesn't exist, which the model must admit rather than invent. Nothing on your computer is changed and nothing goes online. The score and times are saved under padou's state folder (`bench/`), so you can compare models (`/models`), settings and padou versions.
 
 ## Autostart
 

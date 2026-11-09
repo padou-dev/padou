@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterator
@@ -33,6 +34,28 @@ class Reply:
     tokens_per_second: float | None = None
     elapsed: float = 0.0
     stopped: bool = False  # the user pressed Esc: content is what arrived until then
+
+
+_TEXT_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
+
+
+def text_tool_calls(content: str) -> tuple[str, list[ToolCall]]:
+    """Small models sometimes write a tool call as text (<tool_call>{...}</tool_call>) instead of
+    making a real one. Turn those into real calls; returns the remaining text and the calls."""
+    calls = []
+    for i, m in enumerate(_TEXT_CALL.finditer(content or "")):
+        try:
+            data = json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue
+        name = data.get("name") if isinstance(data, dict) else None
+        if not isinstance(name, str) or not name:
+            continue
+        args = data.get("arguments", data.get("parameters", {}))
+        calls.append(ToolCall(f"text_call_{i}", name, args if isinstance(args, str) else json.dumps(args)))
+    if not calls:
+        return content, []
+    return _TEXT_CALL.sub("", content).strip(), calls
 
 
 class Client:

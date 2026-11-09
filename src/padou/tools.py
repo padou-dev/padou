@@ -144,10 +144,36 @@ def _check(path: Path, roots: list[Path] | None = None) -> None:
         )
 
 
-def _cap(text: str, limit: int) -> str:
+def _cap(text: str, limit: int, hint: str = "") -> str:
     if len(text) <= limit:
         return text
-    return text[:limit] + f"\n[... output cut: showed {limit} of {len(text)} characters]"
+    return text[:limit] + f"\n[... output cut: showed {limit} of {len(text)} characters{hint}]"
+
+
+def squeeze(text: str, limit: int) -> str:
+    """Fit long output into `limit` characters, keeping whole lines from the START (what it is)
+    and the END (where results and errors usually are), with a note about what was skipped."""
+    if len(text) <= limit:
+        return text
+    lines = text.splitlines()
+    head_budget, tail_budget = int(limit * 0.35), int(limit * 0.6)
+    head, used = [], 0
+    for line in lines:
+        if used + len(line) + 1 > head_budget:
+            break
+        head.append(line)
+        used += len(line) + 1
+    tail, used = [], 0
+    for line in reversed(lines[len(head):]):
+        if used + len(line) + 1 > tail_budget:
+            break
+        tail.append(line)
+        used += len(line) + 1
+    tail.reverse()
+    skipped = len(lines) - len(head) - len(tail)
+    if not head and not tail:  # one enormous line
+        return text[:head_budget] + f"\n[... {len(text) - head_budget - tail_budget} characters skipped ...]\n" + text[-tail_budget:]
+    return "\n".join(head + [f"[... {skipped} lines skipped: ask for a narrower command or search for something specific ...]"] + tail)
 
 
 def _tail(text: str, limit: int) -> str:
@@ -181,7 +207,7 @@ def read_file(path: str, cwd: Path, limit: int, start_line: int = 1, max_lines: 
     chunk = lines[start - 1 : start - 1 + count]
     body = "\n".join(f"{n:>5}  {line}" for n, line in enumerate(chunk, start))
     header = f"{p} ({len(lines)} lines total, showing {start}-{start + len(chunk) - 1})\n"
-    return _cap(header + body, limit)
+    return _cap(header + body, limit, "; read on with start_line, or use search to find the part you need")
 
 
 def list_dir(path: str, cwd: Path, limit: int, roots: list[Path] | None = None) -> str:
@@ -244,7 +270,7 @@ def search(pattern: str, cwd: Path, limit: int, path: str = ".", max_results: in
             break
     if not hits:
         return f"no matches for {pattern!r} in {root}"
-    return _cap("\n".join(hits), limit)
+    return squeeze("\n".join(hits), limit)
 
 
 def _walk(root: Path):
@@ -442,7 +468,59 @@ def run_command(name: str, argument: str | None, cwd: Path, limit: int, timeout:
     out = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
     out = out.strip() or "(no output)"
     header = f"$ {' '.join(argv)}  (exit code {proc.returncode})\n"
-    return header + _tail(out, limit)
+    return header + squeeze(out, limit)
+
+
+# --------------------------------------------------------------------------- #
+# Manual pages: the real documentation installed on this computer
+# --------------------------------------------------------------------------- #
+
+MAN_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
+_OVERSTRIKE = re.compile(r".\x08")
+
+
+def man_page(name: str, cwd: Path, limit: int, timeout: float, section: str = "", find: str = "") -> str:
+    """A manual page (Get-Help on Windows), optionally only the parts around `find`."""
+    name = (name or "").strip()
+    section = str(section or "").strip()
+    if not MAN_NAME.match(name):
+        raise ToolError(f"invalid program name: {name!r}")
+    if section and not re.fullmatch(r"[0-9][a-z]{0,3}", section):
+        raise ToolError(f"invalid manual section: {section!r}")
+    if compat.WINDOWS:
+        argv = list(_ps(f"Get-Help {name} -Full"))
+    else:
+        if shutil.which("man") is None:
+            hint = " (on Arch: sudo pacman -S man-db man-pages)" if shutil.which("pacman") else ""
+            raise ToolError(f"the man command isn't installed{hint}, so manual pages can't be read")
+        argv = ["man", *([section] if section else []), name]
+    env = dict(os.environ, MANPAGER="cat", PAGER="cat", MANWIDTH="100", MAN_KEEP_FORMATTING="0", NO_COLOR="1")
+    try:
+        proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, errors="replace", timeout=timeout,
+                              env=env, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        raise ToolError(f"reading the manual for {name} timed out") from None
+    text = _OVERSTRIKE.sub("", proc.stdout or "").strip()
+    if proc.returncode != 0 or not text:
+        raise ToolError(f"no manual page for {name!r} on this system. Don't guess its options: say you couldn't check")
+    lines = text.splitlines()
+    if find:
+        rx = re.compile(re.escape(find), re.IGNORECASE)
+        keep: set[int] = set()
+        for i, line in enumerate(lines):
+            if rx.search(line):
+                keep.update(range(max(0, i - 2), min(len(lines), i + 6)))
+        if not keep:
+            return f"manual for {name} ({len(lines)} lines): {find!r} not found in it"
+        out, last = [], -2
+        for i in sorted(keep):
+            if i != last + 1:
+                out.append("...")
+            out.append(lines[i])
+            last = i
+        return squeeze(f"manual for {name}, parts mentioning {find!r}:\n" + "\n".join(out), limit)
+    return _cap(f"manual for {name} ({len(lines)} lines):\n" + text, limit,
+                "; call again with find set to an option or word to see just those parts")
 
 
 # --------------------------------------------------------------------------- #
@@ -496,6 +574,26 @@ def definitions(commands_enabled: bool = True) -> list[dict]:
             },
         },
     ]
+    defs.append(
+        {
+            "type": "function",
+            "function": {
+                "name": "man_page",
+                "description": "Read a program's manual page installed on this computer (the real, current documentation). "
+                               "Use it before explaining command options you aren't sure about. Use find to get just "
+                               "the parts about one option or word.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Program or topic, e.g. journalctl or systemd.service."},
+                        "find": {"type": "string", "description": "Optional: an option or word, e.g. --since."},
+                        "section": {"type": "string", "description": "Optional manual section, e.g. 5 for config files."},
+                    },
+                    "required": ["name"],
+                },
+            },
+        }
+    )
     if commands_enabled:
         lines = []
         for c in APPROVED_COMMANDS.values():
@@ -521,6 +619,15 @@ def definitions(commands_enabled: bool = True) -> list[dict]:
     return defs
 
 
+EXAMPLE_ARGS = {
+    "read_file": '{"path": "README.md"}',
+    "list_dir": '{"path": "."}',
+    "search": '{"pattern": "error", "path": "."}',
+    "run_command": '{"name": "disk_usage"}',
+    "man_page": '{"name": "journalctl", "find": "--since"}',
+}
+
+
 @dataclass
 class ToolResult:
     ok: bool
@@ -544,11 +651,17 @@ def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_time
         try:
             args = json.loads(raw_args or "{}")
         except json.JSONDecodeError:
-            return ToolResult(False, f"error: arguments were not valid JSON: {raw_args!r}", name, "bad arguments")
+            return ToolResult(False, f"error: arguments were not valid JSON: {raw_args!r}. Call {name} again with a JSON "
+                                     f'object, for example {EXAMPLE_ARGS.get(name, "{}")}', name, "bad arguments")
         if not isinstance(args, dict):
             return ToolResult(False, "error: arguments must be a JSON object", name, "bad arguments")
 
     try:
+        if name == "man_page":
+            topic = str(args.get("name", ""))
+            out = man_page(topic, cwd, limit, command_timeout, str(args.get("section") or ""), str(args.get("find") or ""))
+            what = f" (find {args.get('find')!r})" if args.get("find") else ""
+            return ToolResult(True, out, f"Manual {topic}{what}", f"{out.count(chr(10))} lines")
         if name == "read_file":
             path = args.get("path", "")
             out = read_file(path, cwd, limit, args.get("start_line", 1) or 1, args.get("max_lines", 400) or 400, roots)
@@ -579,6 +692,8 @@ def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_time
             return ToolResult(True, out, f"Run {shown}", f"{body_lines} lines")
         raise ToolError(f"unknown tool {name!r}")
     except ToolError as exc:
+        if "unknown tool" in str(exc):
+            exc = ToolError(f"{exc}. The tools you have are listed in your tool definitions; use one of those names exactly")
         return ToolResult(False, f"error: {exc}", f"{name}", str(exc))
     except Exception as exc:  # never let a tool crash padou
         return ToolResult(False, f"error: {type(exc).__name__}: {exc}", f"{name}", f"{type(exc).__name__}")

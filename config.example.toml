@@ -18,6 +18,8 @@ stop_on_exit = false                     # stop a server padou started when you 
 temperature = 0.7
 stream = true                           # show replies as they are written
 max_tool_rounds = 8                     # tool calls allowed per question
+thinking = false                        # thinking models reason first: better on hard questions, much slower (/think)
+auto_compact = true                     # summarise older messages when the context is nearly full
 # system_prompt = """You are padou..."""
 
 [tools]
@@ -34,3 +36,14 @@ clear_on_start = true                   # clear the terminal before the banner
 animation = true                        # animated compass star (false = still)
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
+reply_stats = true                      # "3.1s · 140 tokens · 22 tok/s" under each answer
+
+[updates]
+check = true                            # once a day, ask GitHub if a newer padou exists (then: /update)
+
+[web]
+enabled = false                         # web search at start; off by default (/web on switches it on)
+provider = "duckduckgo"                 # "duckduckgo" (no account), "searxng" (set url) or "brave" (set api_key)
+url = ""                                # searxng: your instance, e.g. "http://192.168.1.150:8888"
+api_key = ""                            # brave: your Search API key
+max_results = 5

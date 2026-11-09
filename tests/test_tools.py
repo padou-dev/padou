@@ -121,7 +121,7 @@ def test_execute_bad_json_does_not_crash(tmp_path):
 def test_definitions_shape():
     defs = tools.definitions(True)
     names = [d["function"]["name"] for d in defs]
-    assert names == ["read_file", "list_dir", "search", "run_command"]
+    assert names == ["read_file", "list_dir", "search", "man_page", "run_command"]
     assert "run_command" not in [d["function"]["name"] for d in tools.definitions(False)]
 
 

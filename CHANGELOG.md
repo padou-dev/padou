@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-Faster on laptops, and a new admin mode.
+Faster on laptops, a new admin mode, optional web search, and more reliable answers.
+
+- `/web on|off`: optional web search for the session, off by default, shown as `web` in the status line. Providers: DuckDuckGo (no account), your own SearXNG, or the Brave Search API. Never reads pages on your computer or local network
+- `man_page` tool: the model reads the real manuals installed on your computer (or just the parts about one option) instead of guessing options
+- More honest answers: the instructions tell the model to check first, never invent paths, options or settings, and say when its knowledge may be out of date. The context now includes your desktop, session type (Wayland/X11) and terminal
+- Recovering from tool mistakes: broken calls get an example of a correct one, calls written as text are run as real calls, and a call that keeps failing is stopped after two tries
+- Long tool output keeps its start and end, with a note about what was skipped
+- Auto-compact: near a full context, older messages are summarised automatically and the last exchange is kept (`auto_compact` under `[chat]`)
+- A quiet speed line under each answer: `3.1s · 140 tokens · 22 tok/s` (`reply_stats` under `[ui]`)
+- `padou bench`: score the current model on 15 fixed questions in a practice folder, saved for comparison
+- `/help` in groups; `/undo list` (also `/changes`); `/tools`, `/system` and `/screenshot` still work but are no longer listed
 
 - `/mode read | edit | admin` replaces `/write` (which still works, as the old name of `/mode edit`). `Shift+Tab` switches between read-only and edit, quietly: the status line shows the mode
 - Admin mode: change files anywhere, outside the start folder too. System files go through `sudo` (you type your password into sudo, never into padou), get a copy kept for `/undo` instead of the Trash, and are marked `· sudo`. The first time, admin mode explains itself and asks; after that it just switches. Deletes need the name typed, also for files. Never secrets, `/proc`, `/sys`, `/dev`, `/run`, `/boot`, your home folder or a main system folder as a whole

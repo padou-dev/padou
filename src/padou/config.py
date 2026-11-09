@@ -20,8 +20,11 @@ change is needed, show the exact command for the user to run themselves (unless
 edit or admin mode is on, as described below).
 
 Use a tool whenever the answer depends on the user's actual system instead of
-guessing. Never invent file contents or command output. Keep answers short and
-practical, and format them in Markdown."""
+guessing: check first (files, commands, man_page), then answer. Never invent file
+contents, command output, file paths, command options or settings. If you're not
+sure, say so. Your knowledge stops at your training date: for recent versions,
+releases and defaults, say it may be out of date (or search, if web is on).
+Keep answers short and practical, and format them in Markdown."""
 
 
 @dataclass
@@ -48,6 +51,7 @@ class ChatConfig:
     stream: bool = True
     max_tool_rounds: int = 8
     thinking: bool = False  # let thinking models reason before answering (slower); /think switches it
+    auto_compact: bool = True  # summarise older messages automatically when the context is nearly full
 
 
 @dataclass
@@ -67,6 +71,16 @@ class UIConfig:
     animation: bool = True  # the compass-star launch and pulse
     accent: str = ""  # hex colour override, e.g. "#ff5fa2"; empty = from theme
     show_tool_output: bool = False
+    reply_stats: bool = True  # a quiet "3.1s · 140 tokens · 22 tok/s" line under each answer
+
+
+@dataclass
+class WebConfig:
+    enabled: bool = False  # on at start? Off by default: /web on switches it on for a session
+    provider: str = "duckduckgo"  # "duckduckgo" (no account), "searxng" (your own, set url) or "brave" (api_key)
+    url: str = ""  # searxng: your instance, e.g. "http://192.168.1.150:8888"
+    api_key: str = ""  # brave: your Search API key
+    max_results: int = 5
 
 
 @dataclass
@@ -81,6 +95,7 @@ class Config:
     tools: ToolsConfig = field(default_factory=ToolsConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     updates: UpdatesConfig = field(default_factory=UpdatesConfig)
+    web: WebConfig = field(default_factory=WebConfig)
     source: Path | None = None
     warnings: list[str] = field(default_factory=list)
 
@@ -114,7 +129,7 @@ def load(path: Path | None = None) -> Config:
     except (tomllib.TOMLDecodeError, OSError) as exc:
         cfg.warnings.append(f"could not read {path}: {exc}")
         return cfg
-    for name in ("server", "chat", "tools", "ui", "updates"):
+    for name in ("server", "chat", "tools", "ui", "updates", "web"):
         section = data.pop(name, None)
         if section is None:
             continue
@@ -165,6 +180,7 @@ temperature = 0.7
 stream = true                           # show replies as they are written
 max_tool_rounds = 8                     # tool calls allowed per question
 thinking = false                        # thinking models reason first: better on hard questions, much slower (/think)
+auto_compact = true                     # summarise older messages when the context is nearly full
 # system_prompt = \"\"\"You are padou...\"\"\"
 
 [tools]
@@ -181,9 +197,17 @@ clear_on_start = true                   # clear the terminal before the banner
 animation = true                        # animated compass star (false = still)
 accent = ""                             # e.g. "#ff5fa2"; empty = Omarchy theme accent
 show_tool_output = false                # print full tool output, not just a summary
+reply_stats = true                      # "3.1s · 140 tokens · 22 tok/s" under each answer
 
 [updates]
 check = true                            # once a day, ask GitHub if a newer padou exists (then: /update)
+
+[web]
+enabled = false                         # web search at start; off by default (/web on switches it on)
+provider = "duckduckgo"                 # "duckduckgo" (no account), "searxng" (set url) or "brave" (set api_key)
+url = ""                                # searxng: your instance, e.g. "http://192.168.1.150:8888"
+api_key = ""                            # brave: your Search API key
+max_results = 5
 """
 
 
