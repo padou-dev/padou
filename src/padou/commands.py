@@ -464,8 +464,8 @@ def _mode_table(app: "App") -> None:
     ui.info(th, "/mode read · /mode edit [folder] · /mode admin   ·   Shift+Tab switches read ↔ edit")
 
 
-def _edit_folder(app: "App", folder_text: str):
-    """The folder for edit mode, checked; or None after explaining why not."""
+def _edit_folder(app: "App", folder_text: str, quiet: bool = False):
+    """The folder for edit mode, checked; or None after explaining why not (or, quiet, a short reason)."""
     import os
     from pathlib import Path
 
@@ -479,6 +479,8 @@ def _edit_folder(app: "App", folder_text: str):
     try:
         return writes.check_write_root(p, readable)
     except writes.WriteError as exc:
+        if quiet:
+            return str(exc)
         ui.error(th, str(exc))
         ui.info(th, "Start padou in a project folder, or use /mode edit <folder>. /mode admin allows changes anywhere.")
         return None
@@ -494,38 +496,45 @@ def _edit_on(app: "App", folder) -> None:
                 "first and needs your yes. /undo reverts · /mode read stops")
 
 
+def _admin_intro_seen():
+    from padou import paths
+
+    return paths.DATA_DIR / "admin-intro-seen"
+
+
 def _admin_on(app: "App") -> None:
+    """Admin mode. The first time ever, a short explanation and a yes; after that, it just switches."""
     from rich.console import Group
     from rich.panel import Panel
 
     th = app.theme
     if app.mode == "admin":
-        ui.info(th, "Admin mode is already on. /mode read switches it off.")
+        ui.info(th, "Admin mode is already on. /mode read (or Shift+Tab) switches it off.")
         return
-    body = Group(
-        Text("padou may change files anywhere on this computer, for this session:", style="bold"),
-        Text("  • edit, create, move and delete, outside the folder you started in too"),
-        Text("  • system files (like /etc) through sudo: you type your password into sudo, never into padou"),
-        Text("  • every change still shows first and needs your yes; deletes need the name typed"),
-        Text("  • /undo reverts changes, and each one is written to the audit log"),
-        Text("Never, not even here: secret locations (keys, passwords, browser data), /proc, /sys, /dev, /boot.",
-             style=th.dim),
-        Text("A small model can be confidently wrong. Read every change before you approve it.", style=f"bold {th.error}"),
-    )
-    ui.console.print(Panel(body, title=Text(" ⚠ Admin mode ", style=f"bold {th.error}"), title_align="left",
-                           border_style=th.error, padding=(0, 1)))
-    try:
-        answer = ui.console.input(Text.assemble(("  Type ", th.error), ("admin", f"bold {th.error}"),
-                                                (" to switch it on (or press Enter to cancel): ", th.error)))
-    except (KeyboardInterrupt, EOFError):
-        ui.console.print()
-        answer = ""
-    if answer.strip().lower() != "admin":
-        ui.info(th, "  Cancelled: the mode didn't change.")
-        return
+    seen = _admin_intro_seen()
+    if not seen.exists():
+        body = Group(
+            Text("padou may change files anywhere on this computer, not just one folder:", style="bold"),
+            Text("  • you still see every change first and approve it; deletes need the name typed"),
+            Text("  • system files (like /etc/hosts) need your sudo password: you type it into sudo, padou never sees it"),
+            Text("  • /undo puts changes back, and /changes lists them"),
+            Text("Keys, passwords and the core system folders stay off limits. It lasts until you leave it or quit.",
+                 style=th.dim),
+        )
+        ui.console.print(Panel(body, title=Text(" Admin mode ", style=f"bold {th.warn}"), title_align="left",
+                               border_style=th.warn, padding=(0, 1)))
+        if not ui.confirm("  Switch it on?", default=False):
+            ui.info(th, "  OK, the mode didn't change.")
+            return
+        try:
+            seen.parent.mkdir(parents=True, exist_ok=True)
+            seen.touch()
+        except OSError:
+            pass
     app.set_mode("admin")
-    ui.console.print(Text("⚠ Admin mode on for this session. /mode read (or Shift+Tab) switches it off.",
-                          style=f"bold {th.error}"))
+    ui.console.print(Text.assemble(("✎ ", f"bold {th.warn}"), ("Admin mode: ", "bold"),
+                                   ("padou may change files anywhere; you approve each change. ", ""),
+                                   ("/mode read or Shift+Tab to leave.", th.dim)))
 
 
 def cmd_mode(app: "App", arg: str):
@@ -553,14 +562,16 @@ def cmd_mode(app: "App", arg: str):
 
 
 def cycle_mode(app: "App") -> None:
-    """Shift+Tab: read-only <-> edit in the start folder. Admin mode is never one keypress away."""
+    """Shift+Tab: read-only <-> edit in the start folder. Quiet: the status line shows the mode.
+    Admin mode is never one keypress away."""
     if app.mode != "read":
         app.set_mode("read")
-        ui.success(app.theme, "Read-only (Shift+Tab: edit mode).")
         return
-    folder = _edit_folder(app, "")
-    if folder is not None:
-        _edit_on(app, folder)
+    folder = _edit_folder(app, "", quiet=True)
+    if isinstance(folder, str):  # can't edit here: say why, briefly, in the status line
+        app.flash("edit mode isn't allowed in this folder: /mode edit <folder> or /mode admin")
+        return
+    app.set_mode("edit", folder)
 
 
 def cmd_write(app: "App", arg: str):

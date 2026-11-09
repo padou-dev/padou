@@ -226,16 +226,30 @@ def test_mode_edit_read_and_shift_tab(app):
     assert app.mode == "read" and "read-only mode" in app.session.messages[0]["content"]
 
 
-def test_mode_admin_needs_admin_typed(app, monkeypatch):
-    monkeypatch.setattr(ui.console, "input", lambda *a, **k: "yes")
+def test_admin_asks_once_ever_then_just_switches(app, monkeypatch):
+    monkeypatch.setattr(ui, "confirm", lambda *a, **k: False)
     commands.cmd_mode(app, "admin")
     assert app.mode == "read"
     before = app.folders
-    monkeypatch.setattr(ui.console, "input", lambda *a, **k: "admin")
+    monkeypatch.setattr(ui, "confirm", lambda *a, **k: True)
     commands.cmd_mode(app, "admin")
     assert app.mode == "admin" and app.folders is None and "ADMIN MODE" in app.session.messages[0]["content"]
     commands.cycle_mode(app)  # Shift+Tab leaves admin mode
     assert app.mode == "read" and app.folders == before
+    monkeypatch.setattr(ui, "confirm", lambda *a, **k: pytest.fail("asked again"))
+    commands.cmd_mode(app, "admin")
+    assert app.mode == "admin"
+
+
+def test_shift_tab_is_quiet_and_explains_in_the_status_line(app, monkeypatch, tmp_path):
+    with ui.console.capture() as cap:
+        commands.cycle_mode(app)
+    assert app.mode == "edit" and cap.get() == ""
+    commands.cycle_mode(app)
+    app.cwd = Path.home()  # edit mode isn't allowed in the home folder
+    commands.cycle_mode(app)
+    assert app.mode == "read" and "/mode admin" in app._flash[0]
+    assert "/mode admin" in "".join(t for _, t in app._toolbar())
 
 
 def test_old_write_command_still_works(app):

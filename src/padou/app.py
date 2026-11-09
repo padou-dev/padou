@@ -90,6 +90,7 @@ class App:
         self.mode = "read"  # "read" (default), "edit" (in write_roots) or "admin" (anywhere); see set_mode
         self.write_roots: list[Path] = []  # edit mode: the folders padou may change
         self._folders_before_admin: list[Path] | None = None
+        self._flash: tuple[str, float] | None = None  # a short message in the status line, until a time
         self.changes: list[writes.Applied] = []  # what padou changed this session (for /undo)
         self.started_pid: int | None = None  # a model server padou started itself
         self.session = sessions.new(cfg.server.model, str(cwd))
@@ -158,6 +159,10 @@ class App:
             self.write_roots.clear()
         self.mode = mode
         self.refresh_system_prompt()
+
+    def flash(self, text: str, seconds: float = 5.0) -> None:
+        """Show a short message in the status line for a few seconds."""
+        self._flash = (text, time.monotonic() + seconds)
 
     def refresh_system_prompt(self) -> None:
         """Tell the model about changes (like allowed folders) without a new session."""
@@ -346,12 +351,16 @@ class App:
         if self.thinking:
             out.append(("class:tb.accent", "· thinking "))
         if self.mode == "admin":
-            out.append(("class:tb.danger", "· ⚠ ADMIN "))
+            out.append(("class:tb.warn", "· ✎ admin: anywhere "))
         elif self.mode == "edit" and self.write_roots:
             names = ", ".join(ui.short_path(r) for r in self.write_roots)
             out.append(("class:tb.warn", f"· ✎ edit: {names} "))
         else:
             out.append(("class:tb", "· read-only "))
+        flash = getattr(self, "_flash", None)
+        if flash and time.monotonic() < flash[1]:
+            out.append(("class:tb.accent", f"· {flash[0]} "))
+        out.append(("class:tb", "· shift+tab: mode "))
         if self.update_available is not None:
             out.append(("class:tb.accent", f"· ⬆ {self.update_available.version} available: /update "))
         return out
@@ -404,10 +413,10 @@ class App:
 
         @kb.add("s-tab")
         def _cycle_mode(event):
-            """Shift+Tab: read-only <-> edit (the start folder). Admin mode only ever by typing /mode admin."""
-            from prompt_toolkit.application import run_in_terminal
-
-            run_in_terminal(lambda: commands.cycle_mode(self))
+            """Shift+Tab: read-only <-> edit (the start folder), shown in the status line only.
+            Admin mode only ever by typing /mode admin."""
+            commands.cycle_mode(self)
+            event.app.invalidate()
 
         style = Style.from_dict(
             {

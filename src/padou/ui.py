@@ -400,6 +400,13 @@ def _diff_lines(theme: Theme, change, max_lines: int) -> list[Text]:
     return out
 
 
+def _warning(theme: Theme, text: str) -> Text:
+    """A note in a change box: plain facts in grey, real warnings with ⚠."""
+    if text == "outside your home folder":
+        return Text("Outside your home folder.", style=theme.dim)
+    return Text("⚠ " + text, style=f"bold {theme.warn}")
+
+
 def show_change(theme: Theme, change, max_lines: int = 80) -> None:
     """A proposed change, in a box: what will happen, and exactly to what."""
     from padou.writes import _count, human_size
@@ -430,7 +437,7 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
             body.append(Text("It goes to the system Trash" + (" (Recycle Bin)" if compat.WINDOWS else "") +
                              ", so you can restore it from there.", style=theme.dim))
         for w in change.warnings:
-            body.append(Text("⚠ " + w, style=f"bold {theme.warn}"))
+            body.append(_warning(theme, w))
     else:
         added, removed = change.stats
         body.append(Text(f"+{added} −{removed} lines", style=theme.dim))
@@ -441,17 +448,17 @@ def show_change(theme: Theme, change, max_lines: int = 80) -> None:
         body.insert(0, Text(short_path(change.path) + (os.sep if change.is_dir else ""), style="bold"))
     if change.kind != "delete":  # deletes list their warnings above
         for w in change.warnings:
-            body.append(Text("⚠ " + w, style=f"bold {theme.warn}"))
+            body.append(_warning(theme, w))
     if change.elevated:
-        body.append(Text("⚠ Needs administrator rights: sudo will ask for your password (padou never sees it).",
+        body.append(Text("System file: sudo will ask for your password next (padou never sees it).",
                          style=f"bold {theme.error}"))
     if change.reason:
         body.insert(0, Text(change.reason, style=f"italic {theme.dim}"))
     what = "folder " if change.is_dir else ""
-    color = theme.error if change.elevated else theme.warn
-    badge = "  admin" if change.admin else ""
+    color = theme.warn
+    badge = "  · sudo" if change.elevated else ""
     title = Text.assemble((f" {icon} ", f"bold {color}"), (f"{verb} {what}", "bold"), (change.path.name, "bold"),
-                          (badge, f"bold {color}"), (" ", ""))
+                          (badge, theme.dim), (" ", ""))
     console.print(Panel(Group(*body), title=title, title_align="left", border_style=color, padding=(0, 1)))
 
 

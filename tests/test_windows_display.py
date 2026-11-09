@@ -37,4 +37,4 @@ def test_status_line_shows_the_current_mode(tmp_path):
     bar = "".join(t for _, t in a._toolbar())
     assert "✎ edit:" in bar and "read-only" not in bar
     a.mode = "admin"
-    assert "ADMIN" in "".join(t for _, t in a._toolbar())
+    assert "admin: anywhere" in "".join(t for _, t in a._toolbar())

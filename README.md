@@ -226,7 +226,7 @@ Shift+Tab                     switch between read-only and edit (never admin)
 
 <p align="center"><img src="docs/screenshots/write.svg" alt="padou changing files: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
 
-The status line at the bottom always shows the mode: `read-only`, `✎ edit: <folder>` in the warning colour, or `⚠ ADMIN` in red.
+The status line at the bottom always shows the mode: `read-only`, `✎ edit: <folder>` or `✎ admin: anywhere`. Shift+Tab changes it quietly, right there.
 
 What padou can do in edit and admin mode, each one only after you approve it:
 
@@ -254,9 +254,9 @@ For working in a project. padou may change files in the edit folders only, and n
 
 ### Admin mode
 
-For changes anywhere, including your home folder, `~/.config` and system files like `/etc/hosts`. Switching it on shows what it allows and asks you to type `admin`.
+For changes anywhere, including your home folder, `~/.config` and system files like `/etc/hosts`. The first time, padou explains what it allows and asks you to confirm; after that, `/mode admin` just switches.
 
-- **System files go through `sudo`.** When a change needs administrator rights, the box says so in red. After you approve it, `sudo` itself asks for your password: you type it into sudo, padou never sees it. sudo then remembers it for a few minutes, as usual.
+- **System files go through `sudo`.** When a change needs administrator rights, the box says so (and its title shows `· sudo`). After you approve it, `sudo` itself asks for your password: you type it into sudo, padou never sees it. sudo then remembers it for a few minutes, as usual.
 - **System files can't go to the Trash**, so padou keeps a copy before deleting (and refuses if that copy would be over 20 MB). `/undo` puts them back, through sudo again. These copies belong to root, in padou's backup folder.
 - **Still never:** secret locations, a drive root, your home folder or a main system folder as a whole (`/etc` itself can't be deleted), and the parts that keep the system running: `/proc`, `/sys`, `/dev`, `/run`, `/boot`, `/efi` (`/System` on macOS, `C:\Windows`).
 - **Windows:** padou can't ask for administrator rights itself yet. For protected locations, start padou in a terminal opened with *Run as administrator*.
