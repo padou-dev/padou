@@ -180,6 +180,10 @@ def main(argv=None) -> int:
             n_ctx = client.context_size()
             if n_ctx:
                 app.ctx_size = n_ctx
+            wrong = models.loaded_mismatch(cfg.server, client)
+            if wrong:
+                notes.append(("error", f"The running model server has {wrong} loaded, not {cfg.server.model_label} "
+                                       "from your config. /server restart switches it."))
         elif detail != "still starting":
             notes.append(("error", f"Model server not ready ({detail}). Start it, then just type; /doctor explains."))
         notes.append(("info", "Type a message, or /help for commands."))

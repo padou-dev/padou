@@ -154,3 +154,11 @@ def test_setup_restarts_a_running_server_so_new_settings_apply(monkeypatch):
 
 def test_16gb_laptop_with_graphics_carve_out_gets_16k():
     assert detect.context_for(detect.System("arch", "Arch", 13.5, detect.GPU("amd"))) == 16384
+
+
+def test_warns_when_the_running_server_has_another_model():
+    cfg = ServerConfig(url="http://127.0.0.1:8080/v1", start_command=LLAMA)
+    nine = SimpleNamespace(list_models=lambda: ["bartowski/Qwen_Qwen3.5-9B-GGUF:Q4_K_M"])
+    four = SimpleNamespace(list_models=lambda: ["bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M"])
+    assert models.loaded_mismatch(cfg, nine) == "bartowski/Qwen_Qwen3.5-9B-GGUF:Q4_K_M"
+    assert models.loaded_mismatch(cfg, four) == ""

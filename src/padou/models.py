@@ -87,6 +87,21 @@ def without_thinking_block(start_command: str) -> str:
     return compat.join_command(out)
 
 
+def loaded_mismatch(cfg: ServerConfig, client) -> str:
+    """The model a running llama-server actually has loaded, if it isn't the configured one ("" if fine).
+    Happens when the config changed but the server kept running with its old start command."""
+    if kind(cfg) != "llama.cpp":
+        return ""
+    want = current_hf(cfg).lower()
+    try:
+        loaded = client.list_models()
+    except Exception:
+        return ""
+    if not want or not loaded or any(want == m.lower() for m in loaded):
+        return ""
+    return loaded[0]
+
+
 def request_extra(cfg: ServerConfig, thinking: bool) -> dict:
     """Server-specific request fields: thinking on/off, and llama.cpp's prompt cache."""
     k = kind(cfg)
