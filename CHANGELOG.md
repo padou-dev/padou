@@ -10,6 +10,7 @@ Faster and more responsive on laptops.
 - Shows "thinking…" or "choosing a tool…" while the model works, instead of a silent spinner
 - llama.cpp keeps the conversation in its prompt cache between questions (`cache_prompt`, and `--cache-reuse 256` in new setups), so replies start sooner
 - `padou setup` gives a 16K context on machines with 16 GB of RAM (was 8K), and restarts an already-running model server so new settings take effect; `padou doctor` suggests re-running setup when an older config misses these
+- `/clear` also clears the screen (and scrollback), then redraws the banner
 - `/models remove <n>`: free the space of a downloaded model (to the Trash; Ollama models are deleted), never the one in use
 
 ## 0.1.0 (2026-10)

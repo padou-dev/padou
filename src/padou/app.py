@@ -94,6 +94,7 @@ class App:
         self.session.messages = [self.system_message()]
         self._last_interrupt = 0.0
         self.banner: brand.Banner | None = None  # set when the first prompt should pulse the star
+        self.header = None  # the still banner, redrawn by /clear
         self.notes: list[tuple[str, str]] = []  # (kind, message) shown under that banner
         self._t0 = time.monotonic()
 

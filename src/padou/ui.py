@@ -473,9 +473,13 @@ def markdown(text: str) -> None:
     console.print(md(text))
 
 
-def clear() -> None:
+def clear(scrollback: bool = False) -> None:
+    """Clear the window; with scrollback=True also what you could scroll back to."""
     if console.is_terminal:
         console.clear()
+        if scrollback:
+            console.file.write("\x1b[3J")  # most terminals: forget the scrollback too
+            console.file.flush()
 
 
 def save_screenshot(path: Path, title: str = "padou") -> Path:

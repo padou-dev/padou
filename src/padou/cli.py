@@ -162,6 +162,7 @@ def main(argv=None) -> int:
         banner = brand.Banner(
             brand.Colors(th.accent, th.dim, th.bg), __version__, app.model_label, ui.short_path(cwd)
         )
+        app.header = ui.compact_banner(th, app.model_label) if compact else ui.frame_to_text(banner.still())  # for /clear
         try:
             if animate:
                 up, detail = ui.launch(banner, th, bring_up_server, lambda: status["text"])

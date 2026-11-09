@@ -43,6 +43,10 @@ def cmd_exit(app: "App", arg: str):
 
 def cmd_clear(app: "App", arg: str):
     app.new_session()
+    ui.clear(scrollback=True)
+    if getattr(app, "header", None) is not None:
+        ui.console.print(app.header)
+        ui.console.print()
     ui.success(app.theme, "Started a fresh conversation (the previous one is saved, see /resume).")
 
 
@@ -671,7 +675,7 @@ def cmd_update(app: "App", arg: str):
 
 COMMANDS: dict[str, Command] = {
     "help": Command(cmd_help, "Show commands and keys"),
-    "clear": Command(cmd_clear, "Start a fresh conversation"),
+    "clear": Command(cmd_clear, "Clear the screen and start a fresh conversation"),
     "models": Command(cmd_models, "List models, switch to one (downloads it if needed), or remove one", "[n|remove n]"),
     "status": Command(cmd_status, "Model, server, context use and speed"),
     "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),

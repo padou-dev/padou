@@ -164,7 +164,7 @@ padou --version
 | Command | What it does |
 |---|---|
 | `/help` | Show commands and keys |
-| `/clear` | Start a fresh conversation (the old one is saved) |
+| `/clear` | Clear the screen and start a fresh conversation (the old one is saved, see `/resume`) |
 | `/models [n\|remove n]` | List models, switch to one (downloads it if needed), or remove a downloaded one |
 | `/status` | Model, server, context use and speed |
 | `/copy` | Copy the last reply to the clipboard |

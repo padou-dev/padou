@@ -162,3 +162,14 @@ def test_warns_when_the_running_server_has_another_model():
     four = SimpleNamespace(list_models=lambda: ["bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M"])
     assert models.loaded_mismatch(cfg, nine) == "bartowski/Qwen_Qwen3.5-9B-GGUF:Q4_K_M"
     assert models.loaded_mismatch(cfg, four) == ""
+
+
+def test_clear_starts_fresh_and_redraws_the_header(monkeypatch):
+    from rich.text import Text
+    from padou import theme
+    calls = []
+    monkeypatch.setattr(ui, "clear", lambda scrollback=False: calls.append(scrollback))
+    app = SimpleNamespace(theme=theme.load(theme_dir=None), header=Text("BANNER"), new_session=lambda: calls.append("new"))
+    with ui.console.capture() as cap:
+        commands.cmd_clear(app, "")
+    assert calls == ["new", True] and "BANNER" in cap.get() and "fresh conversation" in cap.get()
