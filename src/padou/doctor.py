@@ -21,7 +21,7 @@ def tuning_tip(cfg: Config, n_ctx: int | None) -> str:
     if models.kind(cfg.server) != "llama.cpp":
         return ""
     missing = []
-    if (n_ctx or 0) < 16384 and detect._ram_gb() >= 14:
+    if (n_ctx or 0) < 16384 and detect._ram_gb() >= 12:
         missing.append("a 16K context")
     if "--cache-reuse" not in cfg.server.start_command:
         missing.append("prompt-cache reuse")

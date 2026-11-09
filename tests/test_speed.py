@@ -138,3 +138,19 @@ def test_status_line_shows_thinking():
     a.cfg = SimpleNamespace(ui=SimpleNamespace(animation=False))
     a.update_available, a.write_roots, a.thinking = None, [], True
     assert "thinking" in "".join(t for _, t in a._toolbar())
+
+
+def test_setup_restarts_a_running_server_so_new_settings_apply(monkeypatch):
+    from padou import server, setup, theme
+    srv = ServerConfig(url="http://127.0.0.1:8080/v1", start_command=LLAMA.replace("-c 8192", "-c 16384"))
+    stopped, started = [], []
+    monkeypatch.setattr(setup.Client, "health", lambda self: (not stopped, "ok"))
+    monkeypatch.setattr(server, "find", lambda cfg: [server.Proc(42, "llama-server -c 8192", 900)])
+    monkeypatch.setattr(server, "stop", lambda procs: stopped.append(procs) or [42])
+    monkeypatch.setattr(server, "start", lambda cfg: started.append(cfg.start_command) or (None, "test: not really starting"))
+    setup._start_now(theme.load(theme_dir=None), srv, None, auto=True)
+    assert stopped and started == [srv.start_command]
+
+
+def test_16gb_laptop_with_graphics_carve_out_gets_16k():
+    assert detect.context_for(detect.System("arch", "Arch", 13.5, detect.GPU("amd"))) == 16384

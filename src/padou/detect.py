@@ -289,9 +289,10 @@ def llama_info(binary: str = "llama-server") -> LlamaInfo:
 
 
 def context_for(system: System) -> int:
-    """How much conversation the model can keep in mind. 16K tokens when there's RAM for it
-    (16 GB machines report a little under 16), else 8K. Small models need little memory per token."""
-    return 16384 if system.ram_gb >= 14 else 8192
+    """How much conversation the model can keep in mind. 16K tokens when there's RAM for it, else 8K.
+    The threshold is 12 GB because laptops with 16 GB report less: the integrated graphics keep
+    a slice of it (often 2-4 GB). Small models need little memory per token."""
+    return 16384 if system.ram_gb >= 12 else 8192
 
 
 def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port: int = 8080, context: int = 8192) -> tuple[str, list[str]]:

@@ -62,7 +62,15 @@ def _start_now(theme: Theme, srv: ServerConfig, model: detect.ModelChoice | None
     client = Client(srv)
     try:
         if client.health()[0]:
-            return
+            # Already running: with the settings it was started with. A server padou manages
+            # has to restart before new settings (context size, cache) take effect.
+            procs = server.find(srv) if models.kind(srv) == "llama.cpp" else []
+            if not procs:
+                return
+            if not _yes("The model server is already running with your old settings. Restart it now with the new ones?", True, auto):
+                ui.info(theme, "OK. The new settings apply the next time it starts (or: /server restart inside padou).")
+                return
+            server.stop(procs)
         size = f" (downloads ~{model.size_gb:g} GB the first time)" if model else ""
         if not _yes(f"Start the model server now{size}?", True, auto):
             ui.info(theme, "OK. padou will start it the first time you run `padou`.")

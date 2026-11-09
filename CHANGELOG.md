@@ -9,7 +9,7 @@ Faster and more responsive on laptops.
 - `/think [on|off]`: let thinking models (Qwen3.5) reason before answering, per session; `thinking` under `[chat]` sets the default. Off by default, because it's much slower on a laptop
 - Shows "thinking…" or "choosing a tool…" while the model works, instead of a silent spinner
 - llama.cpp keeps the conversation in its prompt cache between questions (`cache_prompt`, and `--cache-reuse 256` in new setups), so replies start sooner
-- `padou setup` gives a 16K context on machines with 16 GB of RAM or more (was 8K); `padou doctor` suggests re-running setup when an older config misses these
+- `padou setup` gives a 16K context on machines with 16 GB of RAM (was 8K), and restarts an already-running model server so new settings take effect; `padou doctor` suggests re-running setup when an older config misses these
 - `/models remove <n>`: free the space of a downloaded model (to the Trash; Ollama models are deleted), never the one in use
 
 ## 0.1.0 (2026-10)
