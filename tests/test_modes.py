@@ -184,6 +184,7 @@ def test_failed_sudo_changes_nothing(tmp_path, monkeypatch):
 
 
 def test_too_big_system_deletes_are_refused(tmp_path, monkeypatch):
+    monkeypatch.setattr(compat, "WINDOWS", False)  # (on Windows padou asks for an admin terminal first)
     monkeypatch.setattr(writes, "_needs_elevation", lambda change: True)
     monkeypatch.setattr(writes, "MAX_DELETE_BACKUP_BYTES", 10)
     f = tmp_path / "big.bin"
