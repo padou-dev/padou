@@ -801,10 +801,13 @@ def cmd_server(app: "App", arg: str):
             rows.append(["Process", "none found for this user (it may be a system service)"])
         rows += [["Log", ui.short_path(paths.SERVER_LOG)], ["On quit", "stops it" if cfg.stop_on_exit else "keeps running"]]
         ui.table(th, "Model server", ["", ""], rows, styles=["bold", th.dim])
-        ui.info(th, "/server stop · /server restart · /server log  (GPU memory isn't included in the RAM figure)")
+        ui.info(th, "/server stop · restart · log · update  (GPU memory isn't included in the RAM figure)")
         return
     if not local:
         ui.error(th, "That server isn't on this machine, so padou can't control it.")
+        return
+    if action == "update":
+        _update_llamacpp(app)
         return
     if action == "log":
         text = server.tail_log(25)
@@ -837,7 +840,38 @@ def cmd_server(app: "App", arg: str):
         else:
             ui.error(th, detail)
         return
-    ui.error(th, "Usage: /server [status | stop | restart | log]")
+    ui.error(th, "Usage: /server [status | stop | restart | log | update]")
+
+
+def _update_llamacpp(app: "App") -> None:
+    """/server update: a newer build of the llama.cpp padou downloaded."""
+    from padou import llamacpp
+    from padou import setup as setup_mod
+
+    th, cfg = app.theme, app.cfg.server
+    if not llamacpp.managed(cfg.start_command):
+        ui.info(th, "Your llama.cpp wasn't downloaded by padou, so update it the way you installed it "
+                    "(for example yay -Syu, brew upgrade llama.cpp or winget upgrade llama.cpp).")
+        return
+    now = llamacpp.current()
+    try:
+        with ui.ReplyView(th, "asking GitHub for the latest llama.cpp…"):
+            asset = llamacpp.find_asset(llamacpp.same_build_pattern(now.get("asset", "")))
+    except llamacpp.InstallError as exc:
+        ui.error(th, f"{exc}.")
+        return
+    if asset.tag == now.get("tag"):
+        ui.success(th, f"llama.cpp {asset.tag} is the latest build already.")
+        return
+    ui.info(th, f"llama.cpp {now.get('tag', '?')} → {asset.tag} ({asset.size / 1e6:.0f} MB). The model server restarts afterwards.")
+    if not ui.confirm("Update it now?", default=True):
+        return
+    binary = setup_mod.download_llamacpp(th, asset)
+    if not binary:
+        return
+    cfg.start_command = llamacpp.with_server(cfg.start_command, binary)
+    _save_model(app, {"start_command": cfg.start_command})
+    cmd_server(app, "restart")
 
 
 def cmd_think(app: "App", arg: str):
@@ -954,7 +988,7 @@ COMMANDS: dict[str, Command] = {
     "write": Command(cmd_write, "Old name of /mode edit"),
     "undo": Command(cmd_undo, "Undo padou's last change; /undo list shows them all", "[list]"),
     "changes": Command(cmd_changes, "List everything padou changed this session (= /undo list)"),
-    "server": Command(cmd_server, "Model server: status, stop, restart, log", "[stop|restart|log]"),
+    "server": Command(cmd_server, "Model server: status, stop, restart, log, update", "[stop|restart|log|update]"),
     "update": Command(cmd_update, "Check for a newer padou and install it"),
     "resume": Command(cmd_resume, "List saved sessions, or continue one", "[n]"),
     "compact": Command(cmd_compact, "Summarise the conversation to free up context"),

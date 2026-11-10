@@ -1,7 +1,7 @@
 # Maintainer: p@nos <padou.dev@proton.me>
 # padou for the Arch User Repository (AUR). How to publish and update it: CONTRIBUTING.md, "Releasing".
 pkgname=padou
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc="A private, offline AI assistant for your terminal that knows your machine"
 arch=('any')

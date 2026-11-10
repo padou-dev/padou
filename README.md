@@ -11,9 +11,16 @@ Ask padou about *your* computer and it checks before it answers: it reads your c
 
 When you want it to, padou can also change things: fix a config, tidy a folder, edit code, always shown first and only with your yes.
 
+**Install with one line**, then answer a few questions. padou installs what it needs, including the AI model server and a model, without administrator rights:
+
 ```bash
-uv tool install padou
-padou
+# Linux and macOS
+curl -fsSL https://raw.githubusercontent.com/padou-dev/padou/main/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex
 ```
 
 > [!NOTE]
@@ -60,21 +67,27 @@ Every push is tested automatically on Linux, macOS and Windows by GitHub Actions
 ## Requirements
 
 - Linux, macOS or Windows; see [Platforms](#platforms)
-- [`uv`](https://docs.astral.sh/uv/) (it installs Python 3.11+ for you if needed)
-- An OpenAI-compatible model server. For llama.cpp, start it **with `--jinja`**, which tool calling needs.
+- [`uv`](https://docs.astral.sh/uv/) (it installs Python 3.11+ for you if needed). The install line installs it if it's missing.
+- A model server. If you don't have one, `padou setup` downloads llama.cpp for you. Or use your own llama.cpp (started **with `--jinja`**, which tool calling needs), Ollama or LM Studio.
+- About 4 GB of free disk space for the default model, and 8 GB of RAM or more (16 GB is comfortable).
 
 ## Quick start
 
 ```bash
-uv tool install padou
-padou
+curl -fsSL https://raw.githubusercontent.com/padou-dev/padou/main/install.sh | sh              # Linux, macOS
 ```
 
-Or the latest code straight from GitHub: `uv tool install git+https://github.com/padou-dev/padou`. On Arch and Omarchy: `yay -S padou` (AUR).
+```powershell
+irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex                    # Windows
+```
 
-On Windows, in PowerShell: `irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex` (it installs uv too if you want). See the [Windows guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows.md).
+The installer asks before it installs anything:
 
-The first time you run `padou`, the **setup wizard** starts. It looks at your OS, GPU and RAM, finds any model server you already have (llama.cpp, Ollama or LM Studio), recommends a model, writes the config, and offers to start the server. If you have no model server yet, it shows the exact install command for your system. Re-run it any time with `padou setup`.
+1. **uv**, if you don't have it: the tool that installs padou, and Python for it.
+2. **padou**, from [PyPI](https://pypi.org/project/padou/).
+3. **The setup wizard.** It looks at your OS, GPU and RAM and finds any model server you already have (llama.cpp, Ollama or LM Studio). **If you have none, it offers to download llama.cpp** for your system: the Vulkan build for NVIDIA, AMD and Intel graphics on Windows and Linux, the Metal build on Apple Silicon, or the CPU build. It goes into padou's own folder, with no administrator rights. Then the wizard recommends a model, writes the config and starts the server, which downloads the model once (about 3 GB) with a progress bar.
+
+Already have uv? `uv tool install padou`, then `padou`. On Arch and Omarchy: `yay -S padou` (AUR). The latest code from GitHub: `uv tool install git+https://github.com/padou-dev/padou`. Re-run the wizard any time with `padou setup`, and update a llama.cpp padou downloaded with `/server update`.
 
 The rest of this section explains what the wizard does for you, in case you'd rather do it by hand.
 
@@ -511,7 +524,8 @@ See [`config.example.toml`](https://github.com/padou-dev/padou/blob/main/config.
 ```bash
 uv tool uninstall padou
 systemctl --user disable --now llama-server 2>/dev/null; rm -f ~/.config/systemd/user/llama-server.service
-rm -rf ~/.config/padou ~/.local/share/padou ~/.local/state/padou    # config, sessions, history, logs
+rm -rf ~/.config/padou ~/.local/share/padou ~/.local/state/padou    # config, sessions, history, logs, downloaded llama.cpp
+rm -rf ~/.cache/llama.cpp ~/.cache/huggingface/hub/models--*GGUF     # downloaded models (check first if other apps use them)
 ```
 
 On Windows, in PowerShell:

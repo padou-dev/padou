@@ -12,7 +12,7 @@ import subprocess
 from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
-from padou import config, detect, models, paths, server, ui
+from padou import compat, config, detect, models, paths, server, ui
 from padou.client import Client
 from padou.config import ServerConfig
 from padou.theme import Theme
@@ -99,6 +99,54 @@ def _start_now(theme: Theme, srv: ServerConfig, model: detect.ModelChoice | None
 # --------------------------------------------------------------------------- #
 
 
+def download_llamacpp(theme: Theme, asset) -> str:
+    """Download and unpack a llama.cpp build with a progress line; returns llama-server's path or ""."""
+    from padou import llamacpp
+
+    try:
+        with ui.ReplyView(theme, f"downloading llama.cpp {asset.tag}…") as view:
+            def show(done, total):
+                if total:
+                    view.set_label(f"downloading llama.cpp {asset.tag}… {100 * done // total}% "
+                                   f"({done / 1e6:.0f} of {total / 1e6:.0f} MB)")
+            server = llamacpp.install(asset, progress=show)
+    except llamacpp.InstallError as exc:
+        ui.error(theme, f"Couldn't install llama.cpp: {exc}")
+        return ""
+    except KeyboardInterrupt:
+        ui.info(theme, "Download cancelled; nothing was installed.")
+        return ""
+    ui.success(theme, f"llama.cpp {asset.tag} is ready ({ui.short_path(server)}).")
+    return str(server)
+
+
+def offer_download(theme: Theme, system: detect.System, auto: bool) -> str:
+    """No model server here: offer to download llama.cpp into padou's own folder. Returns llama-server's path or ""."""
+    from padou import llamacpp
+
+    pattern, name = llamacpp.variant(system.gpu.vendor)
+    ui.console.print(Text("\nNo model server found. padou needs one to run the AI on this computer.", style="bold"))
+    if compat.LINUX and system.gpu.vendor not in ("none", "apple") and not llamacpp.has_vulkan():
+        ui.console.print(Text("Your graphics chip needs the Vulkan loader for a GPU build (Arch: sudo pacman -S vulkan-icd-loader; "
+                              "Ubuntu: sudo apt install libvulkan1). Until then padou uses the CPU build, which is slower.",
+                              style=theme.warn))
+    try:
+        with ui.ReplyView(theme, "asking GitHub for the latest llama.cpp…"):
+            asset = llamacpp.find_asset(pattern)
+    except llamacpp.InstallError as exc:
+        ui.error(theme, f"{exc}.")
+        return ""
+    size = f"{asset.size / 1e6:.0f} MB" if asset.size else "a small download"
+    ui.info(theme, f"padou can download llama.cpp {asset.tag} for {name}: {size}, from github.com/{llamacpp.REPO}.")
+    ui.info(theme, f"It goes into padou's own folder ({ui.short_path(llamacpp.home())}): no administrator rights, "
+                   "nothing installed system-wide; uninstalling padou can remove it.")
+    if system.os_family == "arch":
+        ui.info(theme, "(On Arch you can also install it as a package instead: yay -S llama.cpp-vulkan-git)")
+    if not _yes("Download llama.cpp now?", True, auto):
+        return ""
+    return download_llamacpp(theme, asset)
+
+
 def run(theme: Theme, auto: bool = False) -> bool:
     """Returns True if a config was written."""
     ui.console.print(Text.assemble(("❯_ ", f"bold {theme.accent}"), ("padou setup", "bold")))
@@ -119,10 +167,16 @@ def run(theme: Theme, auto: bool = False) -> bool:
             styles=["bold", "", "", theme.dim],
         )
 
+    # 0) nothing at all: offer to download llama.cpp, so there's nothing to install by hand
+    if not (llama.installed or llama.running or ollama.installed or ollama.running or lms.running):
+        binary = offer_download(theme, system, auto)
+        if binary:
+            llama.installed, llama.binary = True, binary
+
     # 1) llama.cpp: padou's default, and the only one it can autostart with a model download
     if llama.installed or llama.running:
         if llama.installed:
-            info = detect.llama_info()
+            info = detect.llama_info(llama.binary)
             gpu_build = info.gpu_build
         else:
             info, gpu_build = detect.LlamaInfo(), None
@@ -131,7 +185,7 @@ def run(theme: Theme, auto: bool = False) -> bool:
         if gpu_build is False and system.gpu.vendor != "none":
             ui.console.print(Text(f"Your llama.cpp is a CPU-only build, but you have a GPU. A {system.gpu.backend.upper()} build would be much faster.", style=theme.warn))
         ctx = detect.context_for(system)
-        command, warnings = detect.build_start_command(model, info, use_gpu, context=ctx)
+        command, warnings = detect.build_start_command(model, info, use_gpu, context=ctx, binary=llama.binary or "llama-server")
         for w in warnings:
             ui.console.print(Text(w, style=theme.warn))
         srv = ServerConfig(url=llama.url, model=model.hf, model_label=model.label, autostart=True, start_command=command,
@@ -167,7 +221,7 @@ def run(theme: Theme, auto: bool = False) -> bool:
         return True
 
     # 4) Nothing yet: show how to install one, and write a config that will work afterwards
-    ui.console.print(Text("\nNo model server found. Install one of these, then run `padou setup` again:", style="bold"))
+    ui.console.print(Text("\nYou can also install a model server yourself with one of these, then run `padou setup` again:", style="bold"))
     rows = [[desc, Text(cmd, style=f"bold {theme.accent}")] for desc, cmd in detect.install_hints(system)]
     ui.table(theme, "How to install a model server here", ["What", "Command"], rows)
     ui.info(theme, "padou doesn't run these for you, because they need your password or download installers.")

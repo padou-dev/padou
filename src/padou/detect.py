@@ -120,7 +120,10 @@ def _run(argv: list[str], timeout: float = 10) -> str:
     if shutil.which(argv[0]) is None:
         return ""
     try:
-        p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
+        from padou import llamacpp
+
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL,
+                           env=llamacpp.env_for(argv[0]))
         return (p.stdout or "") + (p.stderr or "")
     except (OSError, subprocess.TimeoutExpired):
         return ""
@@ -231,6 +234,7 @@ class Backend:
     installed: bool
     running: bool
     models: list[str] = field(default_factory=list)
+    binary: str = ""  # llama.cpp: the llama-server to use (on PATH, or the one padou downloaded)
 
 
 def _get(url: str) -> httpx.Response | None:
@@ -250,7 +254,10 @@ def detect_backends() -> list[Backend]:
         m = _get("http://127.0.0.1:8080/v1/models")
         if m is not None and m.status_code == 200:
             models = [x.get("id", "") for x in m.json().get("data", [])]
-    out.append(Backend("llama.cpp", "http://127.0.0.1:8080", shutil.which("llama-server") is not None, running, models))
+    from padou import llamacpp
+
+    binary = "llama-server" if shutil.which("llama-server") else llamacpp.current().get("server", "")
+    out.append(Backend("llama.cpp", "http://127.0.0.1:8080", bool(binary), running, models, binary or "llama-server"))
 
     r = _get("http://127.0.0.1:11434/api/tags")
     models = [x.get("name", "") for x in r.json().get("models", [])] if r is not None and r.status_code == 200 else []
@@ -295,17 +302,18 @@ def context_for(system: System) -> int:
     return 16384 if system.ram_gb >= 12 else 8192
 
 
-def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port: int = 8080, context: int = 8192) -> tuple[str, list[str]]:
+def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port: int = 8080, context: int = 8192,
+                        binary: str = "llama-server") -> tuple[str, list[str]]:
     """The llama-server command for this model and this build, plus warnings."""
     warnings = []
-    argv = ["llama-server", "-hf", model.hf]
+    argv = [binary, "-hf", model.hf]
     if use_gpu:
         argv += ["-ngl", "99"]
     argv += ["-c", str(context), "--host", "127.0.0.1", "--port", str(port)]
     if not info.help_text:
         # couldn't ask llama-server; assume a current build
         argv += ["--jinja", "--reasoning-budget", "0", "--no-mmproj", "--cache-reuse", "256"]
-        return " ".join(argv), warnings
+        return compat.join_command(argv), warnings
     if info.supports("--jinja"):
         argv.append("--jinja")
     else:
@@ -319,7 +327,7 @@ def build_start_command(model: ModelChoice, info: LlamaInfo, use_gpu: bool, port
     if info.supports("--cache-reuse"):
         # reuse cached chunks of the prompt even when something earlier changed: quicker replies
         argv += ["--cache-reuse", "256"]
-    return " ".join(argv), warnings
+    return compat.join_command(argv), warnings
 
 
 # --------------------------------------------------------------------------- #

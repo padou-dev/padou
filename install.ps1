@@ -1,10 +1,14 @@
-# padou installer for Windows (PowerShell).
-# Installs the padou command with uv, then runs `padou setup`.
-# It never installs llama.cpp or changes system settings; the wizard shows you the command.
-# Read it before running it: it's short on purpose.
+# padou installer for Windows (PowerShell). One line:
 #
-#   From a downloaded copy of padou:   powershell -ExecutionPolicy Bypass -File .\install.ps1
-#   Or straight from GitHub:           irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex
+#
+# Or from a downloaded copy of padou:   powershell -ExecutionPolicy Bypass -File .\install.ps1
+#
+# What it does, asking before anything is installed:
+#   1. uv, the tool that installs padou (and Python for it), if you don't have it yet;
+#   2. padou itself, from PyPI (or from this folder, if you run it inside a copy of padou);
+#   3. `padou setup`, which finds or downloads a model server (llama.cpp) and a model.
+# It never needs administrator rights or changes system settings. Read it first if you like: it's short on purpose.
 
 $ErrorActionPreference = "Stop"
 function Say($msg)  { Write-Host ":: $msg" -ForegroundColor Magenta }
@@ -13,10 +17,10 @@ function Warn($msg) { Write-Host "!! $msg" -ForegroundColor Yellow }
 # 1. uv (manages padou's Python environment, and Python itself)
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Warn "uv is not installed. It's the tool padou uses to install itself (https://docs.astral.sh/uv)."
-    $answer = Read-Host "Install uv now with its official installer? [y/N]"
-    if ($answer -notmatch '^(y|yes)$') {
+    $answer = Read-Host "Install uv now with its official installer (no administrator rights needed)? [Y/n]"
+    if ($answer -match '^(n|no)$') {
         Say "Install it yourself with:  winget install --id=astral-sh.uv -e   then run this script again."
-        exit 1
+        return
     }
     powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
     $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"   # so this window can use uv straight away
@@ -34,22 +38,19 @@ if ($here -and (Test-Path (Join-Path $here "pyproject.toml"))) {
         uv tool install --force --reinstall "$here"
     }
 } else {
-    Say "Installing padou from GitHub ..."
-    uv tool install --force "git+https://github.com/padou-dev/padou"
+    Say "Installing padou ..."
+    uv tool install --force padou
 }
-if ($LASTEXITCODE -ne 0) { Warn "The install failed (see above)."; exit 1 }
+if ($LASTEXITCODE -ne 0) { Warn "The install failed (see above)."; return }
 uv tool update-shell | Out-Null
 
 # 3. the setup wizard: picks a server and model, writes the config
 $padou = Join-Path (uv tool dir --bin) "padou.exe"
 $config = Join-Path $env:APPDATA "padou\config.toml"
 if (Test-Path $config) {
-    Say "Keeping your existing config (re-run the wizard any time: padou setup)."
+    Say "Keeping your existing settings (run the wizard again any time: padou setup)."
 } else {
     & $padou setup
 }
 
-if (-not (Get-Command llama-server -ErrorAction SilentlyContinue)) {
-    Warn "llama-server isn't installed yet. The easiest way:  winget install llama.cpp"
-}
-Say "Done. Open a NEW terminal, run 'padou doctor' to check everything, then 'padou' to chat."
+Say "Done. Open a NEW terminal and type: padou"

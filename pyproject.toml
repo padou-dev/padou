@@ -1,6 +1,6 @@
 [project]
 name = "padou"
-version = "0.2.0"
+version = "0.2.1"
 description = "A private, offline AI assistant for your terminal that knows your machine. Built for small models on laptops."
 readme = "README.md"
 license = "MIT"

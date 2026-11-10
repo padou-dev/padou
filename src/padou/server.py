@@ -51,8 +51,11 @@ def start(cfg: ServerConfig) -> tuple[subprocess.Popen | None, str]:
     with open(paths.SERVER_LOG, "ab") as log:
         log.write(f"\n===== padou started: {compat.join_command(argv)} =====\n".encode())
         log.flush()
+        from padou import llamacpp
+
         proc = subprocess.Popen(
             [exe, *argv[1:]],  # a list and no shell: nothing in the command is interpreted
+            env=llamacpp.env_for(exe),  # a llama.cpp padou downloaded finds its libraries next to it
             stdout=log,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
