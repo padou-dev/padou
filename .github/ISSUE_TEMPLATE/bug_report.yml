@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in padou doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you typed, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `padou doctor`
+      description: Run `padou doctor` in a terminal and paste the result. It contains no secrets.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: padou version
+      description: "`padou --version`"
+      placeholder: padou 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model and server
+      placeholder: Qwen3.5 4B on llama.cpp (Vulkan)
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options: [Linux, macOS, Windows, Windows (WSL)]
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "**Security problem?** Please don't report it here: see SECURITY.md."

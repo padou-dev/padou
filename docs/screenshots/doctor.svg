@@ -3,9 +3,9 @@
 <rect x="1" y="1" width="733" height="370" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
 <text x="367.5" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou doctor</text>
 <g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
-<text x="22.0" y="57" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">~/Projects/padou </text>
-<text x="165.3" y="57" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
-<text x="182.2" y="57" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">padou doctor</text>
+<text x="22.0" y="57" fill="#7f849c" textLength="16.9" lengthAdjust="spacingAndGlyphs">~ </text>
+<text x="38.9" y="57" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
+<text x="55.7" y="57" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">padou doctor</text>
 <text x="22.0" y="91" fill="#ff5fa2" font-weight="700" textLength="674.4" lengthAdjust="spacingAndGlyphs">                                  padou doctor                                  </text>
 <text x="22.0" y="108" fill="#7f849c" textLength="674.4" lengthAdjust="spacingAndGlyphs">┏━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</text>
 <rect x="25.2" y="112" width="2" height="17" fill="#7f849c"/>
@@ -20,7 +20,7 @@
 <rect x="59.3" y="146" width="1.2" height="17" fill="#7f849c"/>
 <text x="64.2" y="159" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Python            </text>
 <rect x="227.9" y="146" width="1.2" height="17" fill="#7f849c"/>
-<text x="232.8" y="159" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> 3.14.7                                               </text>
+<text x="232.8" y="159" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> 3.14.8                                               </text>
 <rect x="691.6" y="146" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="163" width="1.2" height="17" fill="#7f849c"/>
 <text x="30.4" y="176" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
@@ -30,7 +30,7 @@
 <text x="232.8" y="176" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> linux                                                </text>
 <rect x="691.6" y="163" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="180" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="193" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
+<text x="30.4" y="193" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
 <rect x="59.3" y="180" width="1.2" height="17" fill="#7f849c"/>
 <text x="64.2" y="193" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Config file       </text>
 <rect x="227.9" y="180" width="1.2" height="17" fill="#7f849c"/>
@@ -55,14 +55,14 @@
 <rect x="59.3" y="231" width="1.2" height="17" fill="#7f849c"/>
 <text x="64.2" y="244" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Context window    </text>
 <rect x="227.9" y="231" width="1.2" height="17" fill="#7f849c"/>
-<text x="232.8" y="244" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> 8192 tokens (from server)                            </text>
+<text x="232.8" y="244" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> 16384 tokens (from server)                           </text>
 <rect x="691.6" y="231" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="248" width="1.2" height="17" fill="#7f849c"/>
 <text x="30.4" y="261" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>
 <rect x="59.3" y="248" width="1.2" height="17" fill="#7f849c"/>
 <text x="64.2" y="261" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Test reply        </text>
 <rect x="227.9" y="248" width="1.2" height="17" fill="#7f849c"/>
-<text x="232.8" y="261" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> &#x27;ready&#x27; in 0.2s, 23.2 tok/s                          </text>
+<text x="232.8" y="261" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> &#x27;ready&#x27; in 0.4s, 23.9 tok/s                          </text>
 <rect x="691.6" y="248" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="265" width="1.2" height="17" fill="#7f849c"/>
 <text x="30.4" y="278" fill="#7f849c" textLength="25.3" lengthAdjust="spacingAndGlyphs"> · </text>
@@ -83,7 +83,7 @@
 <rect x="59.3" y="299" width="1.2" height="17" fill="#7f849c"/>
 <text x="64.2" y="312" fill="#c8cde8" textLength="160.2" lengthAdjust="spacingAndGlyphs"> Updates           </text>
 <rect x="227.9" y="299" width="1.2" height="17" fill="#7f849c"/>
-<text x="232.8" y="312" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> checked daily; installed from a git clone; /update   </text>
+<text x="232.8" y="312" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> checked daily; installed with uv tool; /update       </text>
 <rect x="691.6" y="299" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="316" width="1.2" height="17" fill="#7f849c"/>
 <text x="30.4" y="329" fill="#9ece6a" font-weight="700" textLength="25.3" lengthAdjust="spacingAndGlyphs"> ✓ </text>

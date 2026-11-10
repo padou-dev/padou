@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="768" height="610" viewBox="0 0 768 610">
-<rect width="768" height="610" rx="12" fill="#16161e"/>
-<rect x="1" y="1" width="766" height="608" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
-<text x="384.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="802" height="678" viewBox="0 0 802 678">
+<rect width="802" height="678" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="800" height="676" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="401.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou</text>
 <g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
 <rect x="84.6" y="44" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="47.3" y="74" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╲</text>
@@ -11,7 +11,7 @@
 <rect x="84.6" y="78" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="97.9" y="91" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╱</text>
 <text x="182.2" y="91" fill="#c8cde8" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">padou</text>
-<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.1.0 · παντού</text>
+<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.2.0 · παντού</text>
 <text x="22.0" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
 <text x="81.0" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">◆</text>
 <text x="97.9" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
@@ -44,18 +44,31 @@
 <text x="317.1" y="363" fill="#ff5fa2" font-weight="700" textLength="67.4" lengthAdjust="spacingAndGlyphs">~/.cache</text>
 <text x="384.5" y="363" fill="#c8cde8" textLength="134.9" lengthAdjust="spacingAndGlyphs">. Check it with:</text>
 <text x="22.0" y="397" fill="#ff5fa2" textLength="151.7" lengthAdjust="spacingAndGlyphs">   du -sh ~/.cache</text>
-<text x="22.0" y="431" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
-<text x="38.9" y="431" fill="#c8cde8" textLength="278.2" lengthAdjust="spacingAndGlyphs">why is NetworkManager restarting?</text>
-<text x="22.0" y="465" fill="#ff5fa2" textLength="16.9" lengthAdjust="spacingAndGlyphs">● </text>
-<text x="38.9" y="465" fill="#c8cde8" font-weight="700" textLength="421.5" lengthAdjust="spacingAndGlyphs">Run journalctl --no-pager -n 100 -u NetworkManager</text>
-<text x="22.0" y="482" fill="#7f849c" textLength="33.7" lengthAdjust="spacingAndGlyphs">  ⎿ </text>
-<text x="55.7" y="482" fill="#7f849c" textLength="75.9" lengthAdjust="spacingAndGlyphs">101 lines</text>
-<text x="22.0" y="516" fill="#c8cde8" textLength="278.2" lengthAdjust="spacingAndGlyphs">It isn&#x27;t crashing: the log shows </text>
-<text x="300.2" y="516" fill="#ff5fa2" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">wlan0</text>
-<text x="342.3" y="516" fill="#c8cde8" textLength="219.2" lengthAdjust="spacingAndGlyphs"> dropping after power-save</text>
-<text x="22.0" y="533" fill="#c8cde8" textLength="649.1" lengthAdjust="spacingAndGlyphs">timeouts, then reconnecting. Turning Wi-Fi power saving off usually fixes it.</text>
-<text x="22.0" y="567" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
-<text x="38.9" y="567" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▏</text>
-<text x="22.0" y="584" fill="#ff5fa2" textLength="109.6" lengthAdjust="spacingAndGlyphs"> ✦ Qwen3.5 4B</text>
-<text x="131.6" y="584" fill="#7f849c" textLength="455.2" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 1342/8192 (16%) · /help · read-only </text>
+<text x="22.0" y="431" fill="#7f849c" textLength="244.5" lengthAdjust="spacingAndGlyphs">  4.1s · 96 tokens · 23 tok/s</text>
+<text x="22.0" y="465" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
+<text x="38.9" y="465" fill="#c8cde8" textLength="404.6" lengthAdjust="spacingAndGlyphs">which journalctl option shows logs since a time?</text>
+<text x="22.0" y="499" fill="#ff5fa2" textLength="16.9" lengthAdjust="spacingAndGlyphs">● </text>
+<text x="38.9" y="499" fill="#c8cde8" font-weight="700" textLength="286.6" lengthAdjust="spacingAndGlyphs">Manual journalctl (find &#x27;--since&#x27;)</text>
+<text x="22.0" y="516" fill="#7f849c" textLength="33.7" lengthAdjust="spacingAndGlyphs">  ⎿ </text>
+<text x="55.7" y="516" fill="#7f849c" textLength="67.4" lengthAdjust="spacingAndGlyphs">14 lines</text>
+<text x="22.0" y="550" fill="#c8cde8" textLength="33.7" lengthAdjust="spacingAndGlyphs">Use </text>
+<text x="55.7" y="550" fill="#ff5fa2" font-weight="700" textLength="59.0" lengthAdjust="spacingAndGlyphs">--since</text>
+<text x="114.7" y="550" fill="#c8cde8" textLength="16.9" lengthAdjust="spacingAndGlyphs"> (</text>
+<text x="131.6" y="550" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">-S</text>
+<text x="148.4" y="550" fill="#c8cde8" textLength="126.4" lengthAdjust="spacingAndGlyphs">), for example </text>
+<text x="274.9" y="550" fill="#ff5fa2" font-weight="700" textLength="261.3" lengthAdjust="spacingAndGlyphs">journalctl --since &quot;1 hour ago&quot;</text>
+<text x="536.2" y="550" fill="#c8cde8" textLength="8.4" lengthAdjust="spacingAndGlyphs">.</text>
+<text x="22.0" y="567" fill="#c8cde8" textLength="168.6" lengthAdjust="spacingAndGlyphs">It takes dates like </text>
+<text x="190.6" y="567" fill="#ff5fa2" font-weight="700" textLength="134.9" lengthAdjust="spacingAndGlyphs">2026-11-09 10:00</text>
+<text x="325.5" y="567" fill="#c8cde8" textLength="134.9" lengthAdjust="spacingAndGlyphs">, or words like </text>
+<text x="460.4" y="567" fill="#ff5fa2" font-weight="700" textLength="75.9" lengthAdjust="spacingAndGlyphs">yesterday</text>
+<text x="536.2" y="567" fill="#c8cde8" textLength="42.1" lengthAdjust="spacingAndGlyphs"> and </text>
+<text x="578.4" y="567" fill="#ff5fa2" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">today</text>
+<text x="620.5" y="567" fill="#c8cde8" textLength="8.4" lengthAdjust="spacingAndGlyphs">.</text>
+<text x="22.0" y="601" fill="#7f849c" textLength="244.5" lengthAdjust="spacingAndGlyphs">  3.2s · 61 tokens · 22 tok/s</text>
+<text x="22.0" y="635" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
+<text x="38.9" y="635" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▏</text>
+<text x="22.0" y="652" fill="#ff5fa2" textLength="109.6" lengthAdjust="spacingAndGlyphs"> ✦ Qwen3.5 4B</text>
+<text x="131.6" y="652" fill="#7f849c" textLength="354.1" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 1342/16384 (8%) · /help </text>
+<text x="485.6" y="652" fill="#7f849c" textLength="252.9" lengthAdjust="spacingAndGlyphs">· read-only · shift+tab: mode </text>
 </g></svg>

@@ -134,3 +134,19 @@ def test_update_command_when_up_to_date(monkeypatch):
     monkeypatch.setattr(updates, "check_now", lambda: updates.Release(__version__, "v" + __version__))
     monkeypatch.setattr(ui, "confirm", lambda *a, **k: pytest.fail("shouldn't ask"))
     assert commands.cmd_update(FakeApp(), "") is None
+
+
+def test_pypi_installs_update_from_pypi(monkeypatch, tmp_path):
+    receipt = tmp_path / "uv-receipt.toml"
+    monkeypatch.setattr(updates.sys, "prefix", str(tmp_path))
+    receipt.write_text('[tool]\nrequirements = [{ name = "padou" }]\n')
+    assert not updates.installed_from_git()
+    receipt.write_text('[tool]\nrequirements = [{ name = "padou", git = "git+https://github.com/padou-dev/padou" }]\n')
+    assert updates.installed_from_git()
+    ran = []
+    monkeypatch.setattr(updates.shutil, "which", lambda n: "/usr/bin/uv")
+    monkeypatch.setattr(updates, "_run_visible", lambda argv, cwd=None: ran.append(argv) or 0)
+    monkeypatch.setattr(updates.compat, "WINDOWS", False)
+    receipt.write_text('[tool]\nrequirements = [{ name = "padou" }]\n')
+    assert updates.update_uv_tool(updates.Release("0.3.0", "v0.3.0")).ok
+    assert ran[-1] == ["uv", "tool", "install", "--force", "padou==0.3.0"]

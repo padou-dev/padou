@@ -171,6 +171,8 @@ def detect_install() -> Install:
             return Install("git", parent)
     if (Path(sys.prefix) / "uv-receipt.toml").exists():
         return Install("uv-tool")
+    if not compat.WINDOWS and str(package).startswith("/usr/"):
+        return Install("system")  # a distribution package (the AUR, ...): the package manager updates it
     return Install("other")
 
 
@@ -238,10 +240,23 @@ def update_git_clone(folder: Path) -> Outcome:
     return Outcome(True, "Pulled the latest code and reinstalled (the dependencies changed).", restart=True)
 
 
+def installed_from_git() -> bool:
+    """A `uv tool install git+https://...` install (else: from PyPI, `uv tool install padou`)."""
+    try:
+        return "git+" in (Path(sys.prefix) / "uv-receipt.toml").read_text(encoding="utf-8")
+    except OSError:
+        return True
+
+
 def update_uv_tool(release: Release) -> Outcome:
     if shutil.which("uv") is None:
         return Outcome(False, "uv isn't on your PATH, so padou can't reinstall itself")
-    command = ["uv", "tool", "install", "--force", git_tool_spec(release)]
+    if installed_from_git():
+        command = ["uv", "tool", "install", "--force", git_tool_spec(release)]
+    else:
+        if not TAG_RE.match(release.tag):
+            return Outcome(False, f"unexpected release tag {release.tag!r}")
+        command = ["uv", "tool", "install", "--force", f"padou=={release.version}"]
     if compat.WINDOWS:
         return Outcome(True, f"padou {release.version} will be installed in a new window as soon as you quit.",
                        restart=True, after_exit=command)

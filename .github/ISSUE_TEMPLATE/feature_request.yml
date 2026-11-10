@@ -1,0 +1,18 @@
+name: Idea or feature request
+description: Something padou could do, or do better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: Describe the situation or problem, not just the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could padou help?
+  - type: markdown
+    attributes:
+      value: padou is built for small models on laptops, so features that keep it fast and simple have the best chance.

@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11)
 
-Faster on laptops, a new admin mode, optional web search, and more reliable answers.
+Faster on laptops, a new admin mode, optional web search, coding mode, and more reliable answers. Now on PyPI (`uv tool install padou`) and the AUR (`yay -S padou`).
 
+- Packaging: published to PyPI by GitHub Actions on each release (trusted publishing, no stored tokens); an AUR package; `/update` upgrades PyPI installs from PyPI
+- CONTRIBUTING.md, SECURITY.md (private vulnerability reporting), issue and pull request templates
+- A rewritten README with fresh screenshots
 - `/web on|off`: optional web search for the session, off by default, shown as `web` in the status line. Providers: DuckDuckGo (no account), your own SearXNG, or the Brave Search API. Never reads pages on your computer or local network
 - `man_page` tool: the model reads the real manuals installed on your computer (or just the parts about one option) instead of guessing options
 - More honest answers: the instructions tell the model to check first, never invent paths, options or settings, and say when its knowledge may be out of date. The context now includes your desktop, session type (Wayland/X11) and terminal

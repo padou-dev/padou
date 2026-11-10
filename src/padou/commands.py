@@ -910,9 +910,13 @@ def cmd_update(app: "App", arg: str):
     if newer and release.url:
         ui.info(th, release.url)
 
+    if install.kind == "system":
+        ui.info(th, "padou was installed by your system's package manager, so update it there:")
+        ui.console.print(Text("  yay -Syu" if shutil.which("pacman") else "  your package manager's upgrade command", style="bold"))
+        return
     if install.kind == "other":
         ui.info(th, "padou wasn't installed with uv, so update it the way you installed it, for example:")
-        ui.console.print(Text(f"  pip install --upgrade {updates.git_tool_spec(release)}", style="bold"))
+        ui.console.print(Text(f"  pip install --upgrade padou=={release.version}", style="bold"))
         return
     if not ui.confirm("Update now?", default=True):
         return

@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="887" height="644" viewBox="0 0 887 644">
-<rect width="887" height="644" rx="12" fill="#16161e"/>
-<rect x="1" y="1" width="885" height="642" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
-<text x="443.5" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou · /help</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="988" height="882" viewBox="0 0 988 882">
+<rect width="988" height="882" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="986" height="880" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="494.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou · /help</text>
 <g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
 <rect x="84.6" y="44" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="47.3" y="74" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╲</text>
@@ -11,7 +11,7 @@
 <rect x="84.6" y="78" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="97.9" y="91" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╱</text>
 <text x="182.2" y="91" fill="#c8cde8" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">padou</text>
-<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.1.0 · παντού</text>
+<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.2.0 · παντού</text>
 <text x="22.0" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
 <text x="81.0" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">◆</text>
 <text x="97.9" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
@@ -26,104 +26,172 @@
 <rect x="84.6" y="146" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="22.0" y="193" fill="#ff5fa2" font-weight="700" textLength="16.9" lengthAdjust="spacingAndGlyphs">❯ </text>
 <text x="38.9" y="193" fill="#c8cde8" textLength="42.1" lengthAdjust="spacingAndGlyphs">/help</text>
-<text x="22.0" y="227" fill="#ff5fa2" font-weight="700" textLength="809.3" lengthAdjust="spacingAndGlyphs">                                            Commands                                            </text>
-<text x="22.0" y="244" fill="#7f849c" textLength="809.3" lengthAdjust="spacingAndGlyphs">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</text>
+<text x="22.0" y="227" fill="#ff5fa2" font-weight="700" textLength="944.2" lengthAdjust="spacingAndGlyphs">                                                    Commands                                                    </text>
+<text x="22.0" y="244" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</text>
 <rect x="25.2" y="248" width="2" height="17" fill="#7f849c"/>
-<text x="30.4" y="261" fill="#c8cde8" font-weight="700" textLength="244.5" lengthAdjust="spacingAndGlyphs"> Command                     </text>
-<rect x="278.1" y="248" width="2" height="17" fill="#7f849c"/>
-<text x="283.3" y="261" fill="#c8cde8" font-weight="700" textLength="539.5" lengthAdjust="spacingAndGlyphs"> What it does                                                   </text>
-<rect x="826.1" y="248" width="2" height="17" fill="#7f849c"/>
-<text x="22.0" y="278" fill="#7f849c" textLength="809.3" lengthAdjust="spacingAndGlyphs">┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩</text>
+<rect x="177.0" y="248" width="2" height="17" fill="#7f849c"/>
+<text x="190.6" y="261" fill="#c8cde8" font-weight="700" textLength="219.2" lengthAdjust="spacingAndGlyphs">Command                   </text>
+<rect x="421.4" y="248" width="2" height="17" fill="#7f849c"/>
+<text x="435.1" y="261" fill="#c8cde8" font-weight="700" textLength="514.2" lengthAdjust="spacingAndGlyphs">What it does                                                 </text>
+<rect x="960.9" y="248" width="2" height="17" fill="#7f849c"/>
+<text x="22.0" y="278" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩</text>
 <rect x="25.6" y="282" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="295" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /help                       </text>
-<rect x="278.5" y="282" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="295" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Show commands and keys                                         </text>
-<rect x="826.5" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="38.9" y="295" fill="#7f849c" font-weight="700" textLength="126.4" lengthAdjust="spacingAndGlyphs">Chat           </text>
+<rect x="177.4" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="295" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/clear                    </text>
+<rect x="421.8" y="282" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="295" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Clear the screen and start a fresh conversation              </text>
+<rect x="961.3" y="282" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="299" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="312" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /clear                      </text>
-<rect x="278.5" y="299" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="312" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Start a fresh conversation                                     </text>
-<rect x="826.5" y="299" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="299" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="312" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/retry                    </text>
+<rect x="421.8" y="299" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="312" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Ask the last question again for a fresh answer               </text>
+<rect x="961.3" y="299" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="316" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="329" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /models [n|remove n]        </text>
-<rect x="278.5" y="316" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="329" fill="#c8cde8" textLength="573.2" lengthAdjust="spacingAndGlyphs"> List models, switch to one (downloads it if needed), or remove one </text>
-<rect x="860.2" y="316" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="316" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="329" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/compact                  </text>
+<rect x="421.8" y="316" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="329" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Summarise the conversation to free up context                </text>
+<rect x="961.3" y="316" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="333" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="346" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /status                     </text>
-<rect x="278.5" y="333" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="346" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Model, server, context use and speed                           </text>
-<rect x="826.5" y="333" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="333" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="346" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/resume [n]               </text>
+<rect x="421.8" y="333" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="346" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">List saved sessions, or continue one                         </text>
+<rect x="961.3" y="333" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="350" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="363" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /copy                       </text>
-<rect x="278.5" y="350" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="363" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Copy the last reply to the clipboard                           </text>
-<rect x="826.5" y="350" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="350" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="363" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/copy [code [n]]          </text>
+<rect x="421.8" y="350" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="363" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Copy the last reply to the clipboard; /copy code: just its   </text>
+<rect x="961.3" y="350" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="367" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="380" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /tools                      </text>
-<rect x="278.5" y="367" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="380" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> List the tools padou may use                                   </text>
-<rect x="826.5" y="367" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="367" width="1.2" height="17" fill="#7f849c"/>
+<rect x="421.8" y="367" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="380" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">code                                                         </text>
+<rect x="961.3" y="367" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="384" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="397" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /folder [add &lt;path&gt;]        </text>
-<rect x="278.5" y="384" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="397" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Folders padou may read: list, add, remove                      </text>
-<rect x="826.5" y="384" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="384" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="397" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/export [file]            </text>
+<rect x="421.8" y="384" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="397" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Save this conversation as a Markdown file                    </text>
+<rect x="961.3" y="384" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="401" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="414" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /write [&lt;folder&gt;|off]       </text>
-<rect x="278.5" y="401" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="414" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Let padou change files in one folder (you approve each change) </text>
-<rect x="826.5" y="401" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="401" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="414" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/think [on|off]           </text>
+<rect x="421.8" y="401" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="414" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Let the model reason before answering (slower, smarter)      </text>
+<rect x="961.3" y="401" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="418" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="431" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /undo                       </text>
-<rect x="278.5" y="418" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="431" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Undo padou&#x27;s last change (edit, new file, move or delete)      </text>
-<rect x="826.5" y="418" width="1.2" height="17" fill="#7f849c"/>
-<rect x="25.6" y="435" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="448" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /changes                    </text>
-<rect x="278.5" y="435" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="448" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> List everything padou changed this session                     </text>
-<rect x="826.5" y="435" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="418" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="431" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/web [on|off]             </text>
+<rect x="421.8" y="418" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="431" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Let padou search the web this session (off by default)       </text>
+<rect x="961.3" y="418" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="448" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">├─────────────────┼────────────────────────────┼───────────────────────────────────────────────────────────────┤</text>
 <rect x="25.6" y="452" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="465" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /server [stop|restart|log]  </text>
-<rect x="278.5" y="452" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="465" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Model server: status, stop, restart, log                       </text>
-<rect x="826.5" y="452" width="1.2" height="17" fill="#7f849c"/>
+<text x="38.9" y="465" fill="#7f849c" font-weight="700" textLength="126.4" lengthAdjust="spacingAndGlyphs">Files and modes</text>
+<rect x="177.4" y="452" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="465" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/mode [read|edit|admin]   </text>
+<rect x="421.8" y="452" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="465" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Read-only, edit (one folder) or admin (anywhere); Shift+Tab: </text>
+<rect x="961.3" y="452" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="469" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="482" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /update                     </text>
-<rect x="278.5" y="469" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="482" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Check for a newer padou and install it                         </text>
-<rect x="826.5" y="469" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="469" width="1.2" height="17" fill="#7f849c"/>
+<rect x="421.8" y="469" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="482" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">read ↔ edit                                                  </text>
+<rect x="961.3" y="469" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="486" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="499" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /resume [n]                 </text>
-<rect x="278.5" y="486" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="499" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> List saved sessions, or continue one                           </text>
-<rect x="826.5" y="486" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="486" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="499" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/folder [add &lt;path&gt;]      </text>
+<rect x="421.8" y="486" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="499" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Folders padou may read: list, add, remove                    </text>
+<rect x="961.3" y="486" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="503" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="516" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /compact                    </text>
-<rect x="278.5" y="503" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="516" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Summarise the conversation to free up context                  </text>
-<rect x="826.5" y="503" width="1.2" height="17" fill="#7f849c"/>
-<rect x="25.6" y="520" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="533" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /doctor                     </text>
-<rect x="278.5" y="520" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="533" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Check server, model and config                                 </text>
-<rect x="826.5" y="520" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="503" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="516" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/undo [list]              </text>
+<rect x="421.8" y="503" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="516" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Undo padou&#x27;s last change; /undo list shows them all          </text>
+<rect x="961.3" y="503" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="533" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">├─────────────────┼────────────────────────────┼───────────────────────────────────────────────────────────────┤</text>
 <rect x="25.6" y="537" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="550" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /system                     </text>
-<rect x="278.5" y="537" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="550" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Show the system prompt                                         </text>
-<rect x="826.5" y="537" width="1.2" height="17" fill="#7f849c"/>
+<text x="38.9" y="550" fill="#7f849c" font-weight="700" textLength="126.4" lengthAdjust="spacingAndGlyphs">Coding         </text>
+<rect x="177.4" y="537" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="550" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/review [focus]           </text>
+<rect x="421.8" y="537" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="550" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Review your uncommitted git changes (bugs first)             </text>
+<rect x="961.3" y="537" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="554" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="567" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /screenshot [name]          </text>
-<rect x="278.5" y="554" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="567" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Save the screen as an SVG image                                </text>
-<rect x="826.5" y="554" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="554" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="567" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/tutor [on|off]           </text>
+<rect x="421.8" y="554" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="567" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Explain and give hints instead of writing the code (for      </text>
+<rect x="961.3" y="554" width="1.2" height="17" fill="#7f849c"/>
 <rect x="25.6" y="571" width="1.2" height="17" fill="#7f849c"/>
-<text x="30.4" y="584" fill="#ff5fa2" textLength="244.5" lengthAdjust="spacingAndGlyphs"> /exit                       </text>
-<rect x="278.5" y="571" width="1.2" height="17" fill="#7f849c"/>
-<text x="283.3" y="584" fill="#c8cde8" textLength="539.5" lengthAdjust="spacingAndGlyphs"> Quit padou (also Ctrl+D)                                       </text>
-<rect x="826.5" y="571" width="1.2" height="17" fill="#7f849c"/>
-<text x="22.0" y="601" fill="#7f849c" textLength="809.3" lengthAdjust="spacingAndGlyphs">└─────────────────────────────┴────────────────────────────────────────────────────────────────┘</text>
-<text x="22.0" y="618" fill="#7f849c" textLength="809.3" lengthAdjust="spacingAndGlyphs">Keys: Enter send · Alt+Enter new line · ↑/↓ history · Tab complete · Ctrl+C cancel · Ctrl+D quit</text>
+<rect x="177.4" y="571" width="1.2" height="17" fill="#7f849c"/>
+<rect x="421.8" y="571" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="584" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">learning)                                                    </text>
+<rect x="961.3" y="571" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="601" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">├─────────────────┼────────────────────────────┼───────────────────────────────────────────────────────────────┤</text>
+<rect x="25.6" y="605" width="1.2" height="17" fill="#7f849c"/>
+<text x="38.9" y="618" fill="#7f849c" font-weight="700" textLength="126.4" lengthAdjust="spacingAndGlyphs">Model          </text>
+<rect x="177.4" y="605" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="618" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/models [n|remove n]      </text>
+<rect x="421.8" y="605" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="618" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">List models, switch to one (downloads it if needed), or      </text>
+<rect x="961.3" y="605" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="622" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="622" width="1.2" height="17" fill="#7f849c"/>
+<rect x="421.8" y="622" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="635" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">remove one                                                   </text>
+<rect x="961.3" y="622" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="639" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="639" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="652" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/server [stop|restart|log]</text>
+<rect x="421.8" y="639" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="652" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Model server: status, stop, restart, log                     </text>
+<rect x="961.3" y="639" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="669" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">├─────────────────┼────────────────────────────┼───────────────────────────────────────────────────────────────┤</text>
+<rect x="25.6" y="673" width="1.2" height="17" fill="#7f849c"/>
+<text x="38.9" y="686" fill="#7f849c" font-weight="700" textLength="126.4" lengthAdjust="spacingAndGlyphs">padou          </text>
+<rect x="177.4" y="673" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="686" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/status                   </text>
+<rect x="421.8" y="673" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="686" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Model, server, context use and speed                         </text>
+<rect x="961.3" y="673" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="690" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="690" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="703" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/doctor                   </text>
+<rect x="421.8" y="690" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="703" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Check server, model and config                               </text>
+<rect x="961.3" y="690" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="707" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="707" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="720" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/update                   </text>
+<rect x="421.8" y="707" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="720" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Check for a newer padou and install it                       </text>
+<rect x="961.3" y="707" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="724" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="724" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="737" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/help                     </text>
+<rect x="421.8" y="724" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="737" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Show commands and keys                                       </text>
+<rect x="961.3" y="724" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="741" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="741" width="1.2" height="17" fill="#7f849c"/>
+<text x="190.6" y="754" fill="#ff5fa2" textLength="219.2" lengthAdjust="spacingAndGlyphs">/exit [&amp;&amp; stop]           </text>
+<rect x="421.8" y="741" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="754" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">Quit padou (also Ctrl+D); /exit &amp;&amp; stop also stops the model </text>
+<rect x="961.3" y="741" width="1.2" height="17" fill="#7f849c"/>
+<rect x="25.6" y="758" width="1.2" height="17" fill="#7f849c"/>
+<rect x="177.4" y="758" width="1.2" height="17" fill="#7f849c"/>
+<rect x="421.8" y="758" width="1.2" height="17" fill="#7f849c"/>
+<text x="435.1" y="771" fill="#c8cde8" textLength="514.2" lengthAdjust="spacingAndGlyphs">server                                                       </text>
+<rect x="961.3" y="758" width="1.2" height="17" fill="#7f849c"/>
+<text x="22.0" y="788" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">└─────────────────┴────────────────────────────┴───────────────────────────────────────────────────────────────┘</text>
+<text x="22.0" y="805" fill="#7f849c" textLength="944.2" lengthAdjust="spacingAndGlyphs">Keys: Enter send · Alt+Enter new line · ↑/↓ history · Tab complete · Shift+Tab mode · Esc stop a reply · Ctrl+C </text>
+<text x="22.0" y="822" fill="#7f849c" textLength="168.6" lengthAdjust="spacingAndGlyphs">cancel · Ctrl+D quit</text>
+<text x="22.0" y="839" fill="#7f849c" textLength="733.4" lengthAdjust="spacingAndGlyphs">Also: /tools (every tool padou may use), /changes (= /undo list), /system, /screenshot.</text>
+<text x="22.0" y="856" fill="#7f849c" textLength="649.1" lengthAdjust="spacingAndGlyphs">Answers can be wrong: review commands before you run them. See DISCLAIMER.md.</text>
 </g></svg>

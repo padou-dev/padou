@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="566" height="270" viewBox="0 0 566 270">
-<rect width="566" height="270" rx="12" fill="#16161e"/>
-<rect x="1" y="1" width="564" height="268" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
-<text x="283.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou · slash-command menu</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="287" viewBox="0 0 650 287">
+<rect width="650" height="287" rx="12" fill="#16161e"/>
+<rect x="1" y="1" width="648" height="285" rx="11" fill="none" stroke="#ff5fa2" stroke-opacity="0.55" stroke-width="2"/>
+<text x="325.0" y="27" fill="#7f849c" font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="12" text-anchor="middle">padou · slash-command menu</text>
 <g font-family="'JetBrains Mono','JetBrainsMono Nerd Font','DejaVu Sans Mono',monospace" font-size="14" xml:space="preserve">
 <rect x="84.6" y="44" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="47.3" y="74" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╲</text>
@@ -11,7 +11,7 @@
 <rect x="84.6" y="78" width="1.2" height="17" fill="#ff5fa2"/>
 <text x="97.9" y="91" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">╱</text>
 <text x="182.2" y="91" fill="#c8cde8" font-weight="700" textLength="42.1" lengthAdjust="spacingAndGlyphs">padou</text>
-<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.1.0 · παντού</text>
+<text x="224.3" y="91" fill="#7f849c" textLength="143.3" lengthAdjust="spacingAndGlyphs">  v0.2.0 · παντού</text>
 <text x="22.0" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
 <text x="81.0" y="108" fill="#ff5fa2" font-weight="700" textLength="8.4" lengthAdjust="spacingAndGlyphs">◆</text>
 <text x="97.9" y="108" fill="#ff5fa2" font-weight="700" textLength="50.6" lengthAdjust="spacingAndGlyphs">──────</text>
@@ -28,10 +28,13 @@
 <text x="38.9" y="193" fill="#c8cde8" textLength="25.3" lengthAdjust="spacingAndGlyphs">/re</text>
 <text x="64.2" y="193" fill="#ff5fa2" textLength="8.4" lengthAdjust="spacingAndGlyphs">▏</text>
 <rect x="38.9" y="197" width="84.3" height="17" fill="#ff5fa2"/>
-<text x="38.9" y="210" fill="#16161e" font-weight="700" textLength="84.3" lengthAdjust="spacingAndGlyphs"> /resume  </text>
-<text x="123.2" y="210" fill="#ff5fa2" textLength="320.3" lengthAdjust="spacingAndGlyphs">  List saved sessions, or continue one</text>
-<text x="22.0" y="227" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">   /help    </text>
-<text x="123.2" y="227" fill="#7f849c" textLength="202.3" lengthAdjust="spacingAndGlyphs">  Show commands and keys</text>
-<text x="22.0" y="244" fill="#ff5fa2" textLength="109.6" lengthAdjust="spacingAndGlyphs"> ✶ Qwen3.5 4B</text>
-<text x="131.6" y="244" fill="#7f849c" textLength="379.3" lengthAdjust="spacingAndGlyphs"> · 22 tok/s · ctx 0/8192 · /help · read-only </text>
+<text x="38.9" y="210" fill="#16161e" font-weight="700" textLength="84.3" lengthAdjust="spacingAndGlyphs"> /retry   </text>
+<text x="123.2" y="210" fill="#ff5fa2" textLength="404.6" lengthAdjust="spacingAndGlyphs">  Ask the last question again for a fresh answer</text>
+<text x="22.0" y="227" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">   /resume  </text>
+<text x="123.2" y="227" fill="#7f849c" textLength="320.3" lengthAdjust="spacingAndGlyphs">  List saved sessions, or continue one</text>
+<text x="22.0" y="244" fill="#c8cde8" textLength="101.2" lengthAdjust="spacingAndGlyphs">   /review  </text>
+<text x="123.2" y="244" fill="#7f849c" textLength="421.5" lengthAdjust="spacingAndGlyphs">  Review your uncommitted git changes (bugs first)</text>
+<text x="22.0" y="261" fill="#ff5fa2" textLength="109.6" lengthAdjust="spacingAndGlyphs"> ✦ Qwen3.5 4B</text>
+<text x="131.6" y="261" fill="#7f849c" textLength="278.2" lengthAdjust="spacingAndGlyphs"> · – tok/s · ctx 0/16384 · /help </text>
+<text x="409.8" y="261" fill="#7f849c" textLength="252.9" lengthAdjust="spacingAndGlyphs">· read-only · shift+tab: mode </text>
 </g></svg>

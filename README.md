@@ -1,35 +1,48 @@
 # padou
 
-A lightweight, local-first AI assistant for your terminal, built for small models running on a laptop.
+**A private, offline AI assistant for your terminal that knows your machine.**
+Built for small models on ordinary laptops: no cloud, no account, no GPU required.
 
-<p align="center"><img src="docs/screenshots/banner.svg" alt="padou's compass star, its rays shooting outward" width="480"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/banner.svg" alt="padou's compass star, its rays shooting outward" width="480"></p>
 
-<p align="center"><img src="docs/screenshots/chat.svg" alt="padou answering questions with its read-only tools" width="760"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/chat.svg" alt="padou checking disk space with df and reading the journalctl manual before answering" width="760"></p>
 
-padou talks to any OpenAI-compatible server (llama.cpp's `llama-server`, Ollama, LM Studio), streams answers as rendered Markdown, and can look at your system through a small set of **read-only** tools, or, when you allow it, change files with your approval. Nothing leaves your machine except the requests padou sends to the server you configure.
+Ask padou about *your* computer and it checks before it answers: it reads your config files and logs, runs a short list of safe commands (`df`, `journalctl`, `systemctl status`…) and reads the real manual pages installed on your system. It runs on a local model through llama.cpp, Ollama or LM Studio, so nothing you ask, and nothing it reads, leaves your machine.
+
+When you want it to, padou can also change things: fix a config, tidy a folder, edit code, always shown first and only with your yes.
+
+```bash
+uv tool install padou
+padou
+```
 
 > [!NOTE]
-> **padou** (παντού, pronounced "padoú") is Greek for "everywhere". This is a learning project, version 0.x. Expect rough edges.
+> **padou** (παντού, pronounced "padoú") is Greek for "everywhere". It's a spare-time project, version 0.x: expect rough edges, and please [report them](https://github.com/padou-dev/padou/issues).
 
 > [!WARNING]
-> padou is provided **as is, without warranty**. AI answers can be wrong: **review every command before you run it**, and don't rely on padou for medical, legal, financial or safety decisions. See [DISCLAIMER.md](DISCLAIMER.md).
+> padou is provided **as is, without warranty**. AI answers can be wrong: **review every command and change before you approve it**, and don't rely on padou for medical, legal, financial or safety decisions. See [DISCLAIMER.md](https://github.com/padou-dev/padou/blob/main/DISCLAIMER.md).
+
+## Why padou
+
+- **Private by design.** Your questions, files and logs stay on your computer. Web search exists, but it's off until you type `/web on`, and even then only the search words go out.
+- **It knows your machine.** It knows your OS, desktop, shell and terminal, reads your actual files and command output, and says "I'm not sure" instead of inventing paths or options.
+- **Made for small models.** Short prompts, a prompt cache, live progress, `Esc` to stop, automatic compacting when the context fills up, and recovery when a small model fumbles a tool call. On a ThinkPad with integrated graphics, Qwen3.5 4B starts answering in under a second at about 24 tokens a second.
+- **Safe when it acts.** Read-only by default. `/mode edit` allows changes in one folder, `/mode admin` anywhere (system files through `sudo`, where you type your password into sudo, never into padou). Every change shows a diff and needs your yes; deletes go to the Trash; `/undo` puts things back; an audit log records it all.
+- **A coding companion.** In a project it attaches files with `@path`, runs your tests and linters after you approve, reviews your git changes with `/review`, opens diffs in VS Code / Code OSS, and has a `/tutor` mode that explains instead of writing the code for you.
+- **Everywhere.** Linux, macOS and Windows, one codebase, tested on all three. It picks up your Omarchy theme's colours.
 
 ## Features
 
-- **The compass star:** padou's mark. παντού means "everywhere", in every direction: on launch, dots gather from everywhere into the star while παντού decodes into padou, and the rays keep shooting outward. Turn it off with `[ui] animation = false`.
-- **Claude Code-style terminal UI:** banner, streaming Markdown, a tool-call log, slash commands with Tab completion, and a status line showing model, speed and context use.
-- **Linux, macOS and Windows:** one padou for all three, with the right commands, folders and Trash for each system.
-- **Read-only by default, edit and admin modes when you want them:** `/mode edit` lets padou edit, create, move and delete (to the Trash) files in one folder, `/mode admin` anywhere, with system files through `sudo`. Every change is shown in a confirmation box and needs your yes, `/undo` reverts it, and an audit log records it.
-- **Read-only tools:** read files, list folders, search text, and run an approved list of safe system commands for your OS (`df`, `systemctl status`, `ipconfig`, `sw_vers`…).
-- **Safety by design:** no shell, no `sudo`, strict argument checks, and secrets (SSH and GPG keys, keychains and credential stores, `.env`, private keys, browser profiles) blocked even through symlinks.
-- **Updates:** once a day padou checks quietly for a new version; `/update` installs it.
-- **Sessions:** every conversation is saved; continue with `/resume` or `padou -c`.
-- **Omarchy aware:** picks up the accent colour of your current Omarchy theme, with a built-in palette everywhere else.
-- **Small-model friendly:** short system prompt, few tools, capped tool output, `/compact` when the context fills up.
+- **Claude Code-style terminal UI:** the compass-star banner, streaming Markdown, a tool-call log, slash commands with Tab completion, `Shift+Tab` for modes, and a status line with model, speed, context, mode and web.
+- **Tools:** read files, list folders, search text, manual pages, an approved list of read-only system commands for your OS, optional web search, and (in edit and admin mode) edit, rewrite, create, move and delete files.
+- **Models:** a setup wizard that looks at your RAM and GPU and recommends one; `/models` to switch, download or remove models; `/think` for step-by-step reasoning when you need it; `padou bench` to score a model on 17 test questions.
+- **Sessions:** every conversation is saved; `/resume`, `padou -c`, `/retry`, `/export` to Markdown, `/copy code`.
+- **Updates:** padou checks once a day in the background, and `/update` installs the new version.
+- **Safety rules:** no shell, strict argument checks, secrets (SSH and GPG keys, keychains, password stores, `.env`, browser profiles) blocked even through symlinks. See [SECURITY.md](https://github.com/padou-dev/padou/blob/main/SECURITY.md).
 
 ## What to expect from a 4B model
 
-Small models are fast and private, but they're not Claude or GPT. They're good at explaining commands, reading a config or log and summarising it, and answering everyday questions. They're weaker at long multi-step reasoning and sometimes pick the wrong tool or misread output. padou keeps the toolset small and the output capped to help them.
+Small models are fast and private, but they're not Claude or GPT. They're good at explaining commands, reading a config or log and summarising it, small scripts and focused code fixes, and everyday questions. They're weaker at long multi-step reasoning and big changes across many files, and their knowledge stops at their training date (padou tells them to say so, and `/web on` helps). padou keeps the toolset small, checks the model's work and caps tool output to help them. `padou bench` shows how well your model does.
 
 ## Platforms
 
@@ -38,11 +51,11 @@ One padou runs everywhere: the same code, with the right commands, folders and T
 | Platform | Status |
 |---|---|
 | **Linux** | ✅ Developed and used daily on Arch / Omarchy 4 |
-| **Windows 10 / 11** | ✅ Native, in PowerShell or Windows Terminal. **[Install guide](docs/install_windows.md)** |
-| **Windows (WSL)** | ✅ Works like Linux. **[WSL guide](docs/install_windows_wsl.md)** |
+| **Windows 10 / 11** | ✅ Native, in PowerShell or Windows Terminal. **[Install guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows.md)** |
+| **Windows (WSL)** | ✅ Works like Linux. **[WSL guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows_wsl.md)** |
 | **macOS** | ✅ Apple Silicon and Intel (Metal on Apple Silicon) |
 
-Every push is tested automatically on Linux, macOS and Windows by GitHub Actions ([the tests](.github/workflows/tests.yml)). Day-to-day use is mostly on Linux, so if something feels off on your system, please open an issue.
+Every push is tested automatically on Linux, macOS and Windows by GitHub Actions ([the tests](https://github.com/padou-dev/padou/blob/main/.github/workflows/tests.yml)). Day-to-day use is mostly on Linux, so if something feels off on your system, please open an issue.
 
 ## Requirements
 
@@ -53,11 +66,13 @@ Every push is tested automatically on Linux, macOS and Windows by GitHub Actions
 ## Quick start
 
 ```bash
-uv tool install git+https://github.com/padou-dev/padou
+uv tool install padou
 padou
 ```
 
-On Windows, in PowerShell: `irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex` (it installs uv too if you want). See the [Windows guide](docs/install_windows.md).
+Or the latest code straight from GitHub: `uv tool install git+https://github.com/padou-dev/padou`. On Arch and Omarchy: `yay -S padou` (AUR).
+
+On Windows, in PowerShell: `irm https://raw.githubusercontent.com/padou-dev/padou/main/install.ps1 | iex` (it installs uv too if you want). See the [Windows guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows.md).
 
 The first time you run `padou`, the **setup wizard** starts. It looks at your OS, GPU and RAM, finds any model server you already have (llama.cpp, Ollama or LM Studio), recommends a model, writes the config, and offers to start the server. If you have no model server yet, it shows the exact install command for your system. Re-run it any time with `padou setup`.
 
@@ -120,7 +135,7 @@ cd padou
 ./install.sh            # Linux and macOS (or: uv tool install .)
 ```
 
-On Windows, run `.\install.ps1` in PowerShell instead (see the **[Windows guide](docs/install_windows.md)**), or use the **[WSL guide](docs/install_windows_wsl.md)**.
+On Windows, run `.\install.ps1` in PowerShell instead (see the **[Windows guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows.md)**), or use the **[WSL guide](https://github.com/padou-dev/padou/blob/main/docs/install_windows_wsl.md)**.
 
 This puts a `padou` command in `~/.local/bin` (`%USERPROFILE%\.local\bin` on Windows), so you can run it from any folder. If your shell can't find it, run `uv tool update-shell` and open a new terminal.
 
@@ -134,7 +149,7 @@ uv tool install --editable .
 
 ### 3. Check and chat
 
-<p align="center"><img src="docs/screenshots/doctor.svg" alt="padou doctor checking server, model and config" width="620"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/doctor.svg" alt="padou doctor checking server, model and config" width="620"></p>
 
 ```bash
 padou doctor            # checks server, model, config, theme, clipboard
@@ -158,8 +173,8 @@ padou --version
 
 ### Slash commands
 
-<p align="center"><img src="docs/screenshots/help.svg" alt="padou's /help command list" width="760"></p>
-<p align="center"><img src="docs/screenshots/autocomplete.svg" alt="slash-command autocomplete" width="520"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/help.svg" alt="padou's /help command list" width="760"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/autocomplete.svg" alt="slash-command autocomplete" width="520"></p>
 
 | Command | What it does |
 |---|---|
@@ -227,7 +242,7 @@ Shift+Tab                     switch between read-only and edit (never admin)
 /changes                      list everything padou changed this session
 ```
 
-<p align="center"><img src="docs/screenshots/write.svg" alt="padou changing files: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/padou-dev/padou/main/docs/screenshots/write.svg" alt="padou changing files: an edit shown as a diff, and a folder delete that needs its name typed" width="700"></p>
 
 The status line at the bottom always shows the mode: `read-only`, `✎ edit: <folder>` or `✎ admin: anywhere`. Shift+Tab changes it quietly, right there.
 
@@ -316,7 +331,9 @@ Once a day, in the background, padou asks GitHub whether a newer version has bee
 and `⬆ 0.3.0 available: /update` in the status line. `/update` shows what's new, asks, and installs it the way you installed padou:
 
 - **From a git clone** (`uv tool install --editable .`): `git pull`, plus a reinstall if the dependencies changed. It refuses if you have uncommitted changes.
+- **With `uv tool install padou`** (from PyPI): `uv tool install --force padou==<new version>`.
 - **With `uv tool install git+https://...`**: the same install, pinned to the new version.
+- **From the AUR** (`yay -S padou`): `/update` tells you; update it with `yay -Syu` like the rest of your system.
 - **On Windows**, a running program can't replace itself, so the install finishes in a new window right after you quit padou.
 
 Turn the daily check off with `[updates] check = false` (or `PADOU_NO_UPDATE_CHECK=1`). `/update` still works whenever you type it.
@@ -405,7 +422,7 @@ When you run `padou` and nothing is listening at the configured address, padou s
 - It only happens for servers on **this machine** (`127.0.0.1` / `localhost`).
 - The server **keeps running** after padou exits, so the next launch is instant. Stop it with `/server stop`.
 - Its output goes to padou's state folder (see [Where padou keeps things](#where-padou-keeps-things)); `/server log` shows it.
-- Turn it off with `[server] autostart = false`, or `--no-autostart` for one run. The [systemd service](contrib/llama-server.service) is the alternative if you'd rather the server always runs.
+- Turn it off with `[server] autostart = false`, or `--no-autostart` for one run. The [systemd service](https://github.com/padou-dev/padou/blob/main/contrib/llama-server.service) is the alternative if you'd rather the server always runs.
 
 > [!NOTE]
 > If you change the port or model in `start_command`, change `[server] url` to match.
@@ -444,7 +461,7 @@ accent = ""            # e.g. "#ff5fa2"; empty = Omarchy theme accent
 check = true           # once a day, ask GitHub if a newer padou exists
 ```
 
-See [`config.example.toml`](config.example.toml) for every option.
+See [`config.example.toml`](https://github.com/padou-dev/padou/blob/main/config.example.toml) for every option.
 
 ### Where padou keeps things
 
@@ -457,8 +474,8 @@ See [`config.example.toml`](config.example.toml) for every option.
 
 ## Extras
 
-- **Start the model server on login:** see [`contrib/llama-server.service`](contrib/llama-server.service).
-- **Open padou from anywhere with a hotkey (Hyprland):** see [`contrib/hyprland.conf`](contrib/hyprland.conf).
+- **Start the model server on login:** see [`contrib/llama-server.service`](https://github.com/padou-dev/padou/blob/main/contrib/llama-server.service).
+- **Open padou from anywhere with a hotkey (Hyprland):** see [`contrib/hyprland.conf`](https://github.com/padou-dev/padou/blob/main/contrib/hyprland.conf).
 
 ## Troubleshooting
 
@@ -510,6 +527,8 @@ padou has no telemetry. Its only network requests are to the model server you co
 
 ## Development
 
+See [CONTRIBUTING.md](https://github.com/padou-dev/padou/blob/main/CONTRIBUTING.md) for setting up, making changes and releasing.
+
 ```bash
 uv sync
 uv run padou           # run from the source tree
@@ -518,8 +537,8 @@ uv run pytest          # tests for the safety rules, write mode, updates, config
 
 ## Disclaimer
 
-padou is free software provided **"as is", without warranty of any kind**. The author(s) are not liable for any damage, data loss or other consequences of using it. AI output can be wrong, so you are responsible for reviewing anything padou suggests, **every file change you approve in write mode**, and every command you choose to run. Models and model servers are third-party software with their own licences, and padou isn't affiliated with any of the companies or projects it mentions. Read the full [DISCLAIMER.md](DISCLAIMER.md). On first run, padou shows a short version of this and asks you to accept it.
+padou is free software provided **"as is", without warranty of any kind**. The author(s) are not liable for any damage, data loss or other consequences of using it. AI output can be wrong, so you are responsible for reviewing anything padou suggests, **every file change you approve in edit or admin mode**, and every command you choose to run. Models and model servers are third-party software with their own licences, and padou isn't affiliated with any of the companies or projects it mentions. Read the full [DISCLAIMER.md](https://github.com/padou-dev/padou/blob/main/DISCLAIMER.md). On first run, padou shows a short version of this and asks you to accept it.
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](https://github.com/padou-dev/padou/blob/main/LICENSE).
