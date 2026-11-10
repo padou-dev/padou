@@ -509,6 +509,35 @@ def open_diff(editor: str, change) -> bool:
         return False
 
 
+def ask_line(prompt: Text) -> str | None:
+    """Read one line after `prompt`. None when the person presses Esc, Ctrl+C or Ctrl+D (they want out).
+
+    In a terminal it uses prompt_toolkit, so Esc works without pressing Enter; otherwise a plain input()."""
+    import sys
+
+    if sys.stdin.isatty() and console.is_terminal:
+        from prompt_toolkit import prompt as pt_prompt
+        from prompt_toolkit.formatted_text import ANSI
+        from prompt_toolkit.key_binding import KeyBindings
+
+        kb = KeyBindings()
+
+        @kb.add("escape")
+        def _(event):
+            event.app.exit(result=None)
+
+        with console.capture() as cap:
+            console.print(prompt, end="")
+        try:
+            return pt_prompt(ANSI(cap.get()), key_bindings=kb)
+        except (KeyboardInterrupt, EOFError):
+            return None
+    try:
+        return console.input(prompt)
+    except (KeyboardInterrupt, EOFError):
+        return None
+
+
 def choose(theme: Theme, question: str, options: dict[str, str], default: str) -> str:
     """Ask for one letter out of `options` ({"y": "yes", ...}); Enter means `default`."""
     keys = "/".join(options)

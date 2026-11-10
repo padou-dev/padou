@@ -88,7 +88,10 @@ def main(argv=None) -> int:
     if args.command == "setup":
         th = theme.load()
         ui.configure(th)
-        setup_wizard.run(th, auto=args.yes)
+        try:
+            setup_wizard.run(th, auto=args.yes)
+        except (setup_wizard.Quit, KeyboardInterrupt, EOFError):
+            ui.info(th, "\nSetup stopped. Anything it already did stays; run `padou setup` any time to finish.")
         return 0
 
     first_run = args.command == "chat" and args.config is None and not paths.CONFIG_FILE.exists()
@@ -96,11 +99,12 @@ def main(argv=None) -> int:
         th = theme.load()
         ui.configure(th)
         ui.clear()
-        ui.info(th, "First run: let's set padou up. (Skip this any time with Ctrl+C; re-run with `padou setup`.)\n")
+        ui.info(th, "First run: let's set padou up.\n")
         try:
             setup_wizard.run(th)
-        except (KeyboardInterrupt, EOFError):
-            ui.info(th, "\nSetup skipped; using the defaults.")
+        except (setup_wizard.Quit, KeyboardInterrupt, EOFError):
+            ui.info(th, "\nSetup stopped. Run `padou setup` when you're ready, then `padou`.")
+            return 0
         try:
             ui.console.input(Text("\nPress Enter to start padou…", style=th.dim))
         except (KeyboardInterrupt, EOFError):

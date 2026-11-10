@@ -94,3 +94,21 @@ def test_model_catalogue_is_sorted_and_from_several_makers():
     assert {"lite", "standard", "better"} <= set(detect.MODELS_BY_KEY)  # recommend() uses these
     for m in detect.MODELS:
         assert m.hf.endswith(":Q4_K_M") and ":" in m.ollama
+
+
+def test_setup_questions_can_quit(monkeypatch):
+    import pytest
+
+    from padou import setup, ui
+
+    answers = iter(["", "maybe", "n"])
+    monkeypatch.setattr(ui, "ask_line", lambda prompt: next(answers))
+    assert setup._yes("Go?", True, auto=False) is True  # Enter: the default
+    assert setup._yes("Go?", True, auto=False) is False  # "maybe" is asked again, then "n"
+    for way_out in ("q", "Quit", None):  # typed q / quit, or Esc / Ctrl+C (None)
+        monkeypatch.setattr(ui, "ask_line", lambda prompt, a=way_out: a)
+        with pytest.raises(setup.Quit):
+            setup._ask("Model", ["1", "2"], "1")
+    monkeypatch.setattr(ui, "ask_line", lambda prompt: "2")
+    assert setup._ask("Model", ["1", "2"], "1") == "2"
+    assert setup._yes("Go?", False, auto=True) is False  # --yes never asks

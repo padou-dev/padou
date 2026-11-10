@@ -8,6 +8,7 @@ One line to install everything.
 - No model server yet? `padou setup` offers to download llama.cpp for this computer (Vulkan for NVIDIA, AMD and Intel graphics; Metal on Apple Silicon; or the CPU build) from the llama.cpp releases on GitHub, checks its checksum, and keeps it in padou's own folder: no administrator rights
 - `/server update` replaces a llama.cpp padou downloaded with the newest build
 - Smarter model recommendation: setup looks at the processor, memory and graphics chip (recent Radeon 680M+/Iris Xe vs older Intel HD/UHD), shows the processor in "Your system", and says why it recommends a model
+- Leave setup at any question: type q or press Esc (Ctrl+C works too). Anything already done stays, and `padou setup` picks it up again
 - The release workflow uses the current upload/download-artifact actions (Node.js 24)
 
 ## 0.2.0 (2026-11)

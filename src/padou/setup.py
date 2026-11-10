@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import subprocess
 
-from rich.prompt import Confirm, Prompt
 from rich.text import Text
 
 from padou import compat, config, detect, models, paths, server, ui
@@ -18,8 +17,35 @@ from padou.config import ServerConfig
 from padou.theme import Theme
 
 
+class Quit(Exception):
+    """The person asked to leave setup (q, Esc or Ctrl+C at a question)."""
+
+
+_theme = Theme()  # set by run(), for the colours of the questions
+QUIT_WORDS = ("q", "quit", "exit")
+
+
+def _ask(question: str, choices: list[str], default: str, show: str = "") -> str:
+    """One answer out of `choices` (Enter = `default`). q, Esc or Ctrl+C raise Quit."""
+    prompt = Text.assemble((question + " ", "bold"), (f"[{show or '/'.join(choices)}]", f"bold {_theme.accent}"),
+                           (f" ({default})", _theme.accent), ("  q or Esc: quit setup", _theme.dim), (": ", ""))
+    while True:
+        answer = ui.ask_line(prompt)
+        if answer is None:
+            raise Quit
+        answer = answer.strip().lower() or default
+        if answer in QUIT_WORDS:
+            raise Quit
+        if answer in choices:
+            return answer
+        ui.console.print(Text(f"Please type one of: {show or ', '.join(choices)}, or q to quit.", style=_theme.warn))
+
+
 def _yes(question: str, default: bool, auto: bool) -> bool:
-    return default if auto else Confirm.ask(question, default=default, console=ui.console)
+    if auto:
+        return default
+    answer = _ask(question, ["y", "n", "yes", "no"], "y" if default else "n", show="y/n")
+    return answer.startswith("y")
 
 
 def _show_system(theme: Theme, system: detect.System) -> None:
@@ -53,7 +79,7 @@ def _pick_model(theme: Theme, system: detect.System, auto: bool, installed: list
     if auto:
         return rec
     default = str(detect.MODELS.index(rec) + 1)
-    choice = Prompt.ask("Model", choices=[str(i) for i in range(1, len(detect.MODELS) + 1)], default=default, console=ui.console)
+    choice = _ask("Model", [str(i) for i in range(1, len(detect.MODELS) + 1)], default, show=f"1-{len(detect.MODELS)}")
     return detect.MODELS[int(choice) - 1]
 
 
@@ -154,9 +180,13 @@ def offer_download(theme: Theme, system: detect.System, auto: bool) -> str:
 
 
 def run(theme: Theme, auto: bool = False) -> bool:
-    """Returns True if a config was written."""
+    """Returns True if a config was written. Raises Quit when the person leaves setup at a question."""
+    global _theme
+    _theme = theme
     ui.console.print(Text.assemble(("❯_ ", f"bold {theme.accent}"), ("padou setup", "bold")))
-    ui.info(theme, "Let's find a model server and a model for this machine. Nothing gets installed without you.\n")
+    ui.info(theme, "Let's find a model server and a model for this machine. Nothing gets installed without you.")
+    if not auto:
+        ui.info(theme, "You can leave at any question: type q or press Esc.\n")
 
     system = detect.detect_system()
     _show_system(theme, system)
@@ -219,7 +249,7 @@ def run(theme: Theme, auto: bool = False) -> bool:
         names = lms.models or ["local-model"]
         rows = [[str(i), n] for i, n in enumerate(names, 1)]
         ui.table(theme, "LM Studio models", ["#", "Model"], rows, styles=[theme.accent, ""])
-        pick = "1" if auto else Prompt.ask("Model", choices=[str(i) for i in range(1, len(names) + 1)], default="1", console=ui.console)
+        pick = "1" if auto else _ask("Model", [str(i) for i in range(1, len(names) + 1)], "1", show=f"1-{len(names)}")
         name = names[int(pick) - 1]
         srv = ServerConfig(url=lms.url, model=name, model_label=name, autostart=False, start_command="")
         _write(theme, srv)
