@@ -11,8 +11,8 @@ def test_os_release_families():
     assert detect.parse_os_release("ID=gentoo")[0] == "linux"
 
 
-def sysinfo(vendor="amd", vram=None, integrated=False, ram=32, fam="arch"):
-    return System(fam, "x", ram, GPU(vendor, "g", vram, integrated))
+def sysinfo(vendor="amd", vram=None, integrated=False, ram=32, fam="arch", name="g", cpu="", cores=0):
+    return System(fam, "x", ram, GPU(vendor, name, vram, integrated), cpu, cores)
 
 
 def test_recommendations():
@@ -22,6 +22,33 @@ def test_recommendations():
     assert detect.recommend(sysinfo("none", None, False, 8)).key == "lite"  # CPU only
     assert detect.recommend(sysinfo("intel", None, True, 6)).key == "lite"  # low RAM
     assert detect.recommend(sysinfo("apple", None, True, 16, "macos")).key == "better"
+
+
+def test_recommendation_looks_at_the_graphics_and_processor():
+    def rec(*a, **k):
+        return detect.recommend(sysinfo(*a, **k)).key
+
+    # ThinkPad X270: Intel HD 620 is slow, so the 2B model even with 16 GB
+    x270 = dict(cpu="Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz", cores=2)
+    assert rec("intel", None, True, 8, name="Intel Corporation HD Graphics 620 (rev 02)", **x270) == "lite"
+    assert rec("intel", None, True, 16, name="INTEL GPU", **x270) == "lite"  # no lspci: the processor tells
+    # ThinkPad Z13: Radeon 680M runs the 4B model well
+    z13 = dict(cpu="AMD Ryzen 7 PRO 6860Z with Radeon Graphics", cores=8)
+    assert rec("amd", 0.5, True, 32, name="AMD/ATI Rembrandt [Radeon 680M]", **z13) == "standard"
+    assert rec("amd", 0.5, True, 32, name="AMD GPU", **z13) == "standard"
+    assert rec("amd", 0.5, True, 8, name="AMD GPU", **z13) == "lite"  # strong chip, too little RAM
+    assert rec("intel", None, True, 16, name="Intel(R) Iris(R) Xe Graphics", cpu="Intel Core i7-1165G7") == "standard"
+    assert rec("intel", None, True, 16, name="Intel UHD Graphics", cpu="Intel Core i5-10210U") == "lite"
+    assert rec("none", None, False, 32, cpu="AMD Ryzen 9 7950X", cores=16) == "standard"  # big CPU, no GPU
+    assert rec("none", None, False, 16, cores=4) == "lite"
+    assert rec("nvidia", 4, False, 16) == "standard"  # small card
+
+
+def test_recommendation_says_why_and_cpu_is_shortened():
+    model, why = detect.recommendation(sysinfo("intel", None, True, 8, name="Intel HD Graphics 620"))
+    assert model.key == "lite" and "older integrated graphics" in why
+    assert detect.short_cpu("Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz") == "Intel Core i5-7300U"
+    assert detect.short_cpu("AMD Ryzen 7 PRO 6860Z with Radeon Graphics") == "AMD Ryzen 7 PRO 6860Z"
 
 
 def test_start_command_adapts_to_build():

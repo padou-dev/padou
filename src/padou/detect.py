@@ -46,7 +46,7 @@ MODELS: list[ModelChoice] = [
     ModelChoice("phi", "Phi-4-mini", "Microsoft (USA)", "bartowski/microsoft_Phi-4-mini-instruct-GGUF:Q4_K_M", "phi4-mini:3.8b", 2.5,
                 "Good at reasoning and maths for its size. MIT licence", 8),
     ModelChoice("standard", "Qwen3.5 4B", "Alibaba (China)", "bartowski/Qwen_Qwen3.5-4B-GGUF:Q4_K_M", "qwen3.5:4b", 3.0,
-                "Integrated GPUs and laptops. The default", 8),
+                "Laptops with recent graphics (Radeon 680M+, Iris Xe). The default", 8),
     ModelChoice("ministral8b", "Ministral 3 8B", "Mistral AI (France)", "unsloth/Ministral-3-8B-Instruct-2512-GGUF:Q4_K_M", "ministral-3:8b", 5.2,
                 "Bigger European option, smarter but slower (Ollama 0.13.1+)", 16),
     ModelChoice("gemma", "Gemma 4 E4B", "Google (USA)", "bartowski/google_gemma-4-E4B-it-GGUF:Q4_K_M", "gemma4:e4b", 5.4,
@@ -87,6 +87,8 @@ class System:
     os_name: str
     ram_gb: float
     gpu: GPU
+    cpu: str = ""  # "Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz"
+    cores: int = 0  # physical cores; 0 if unknown
     notes: list[str] = field(default_factory=list)
 
 
@@ -191,9 +193,43 @@ def detect_gpu() -> GPU:
     if best and shutil.which("lspci"):
         for line in _run(["lspci"]).splitlines():
             if re.search(r"VGA|3D|Display", line) and best.vendor in line.lower().replace("advanced micro devices", "amd"):
-                best.name = line.split(":", 2)[-1].strip()[:70]
+                name = line.split(":", 2)[-1]
+                name = re.sub(r"\s*\(rev \w+\)|\b(Corporation|Inc\.|Advanced Micro Devices,?)\s*", " ", name)
+                best.name = re.sub(r"\s+", " ", name).strip()[:70]
                 break
     return best or GPU("none")
+
+
+def _cpu_name() -> str:
+    if compat.LINUX:
+        try:
+            for line in Path("/proc/cpuinfo").read_text(errors="replace").splitlines():
+                if line.lower().startswith(("model name", "hardware")) and ":" in line:
+                    return line.split(":", 1)[1].strip()
+        except OSError:
+            pass
+    elif compat.MACOS:
+        return _run(["sysctl", "-n", "machdep.cpu.brand_string"]).strip()
+    elif compat.WINDOWS:
+        out = _run(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name"])
+        if out.strip():
+            return out.strip().splitlines()[0].strip()
+    return platform.processor() or ""
+
+
+def _cores() -> int:
+    try:
+        return int(psutil.cpu_count(logical=False) or psutil.cpu_count() or 0)
+    except Exception:
+        return 0
+
+
+def short_cpu(name: str) -> str:
+    """'Intel(R) Core(TM) i5-7300U CPU @ 2.60GHz' -> 'Intel Core i5-7300U'."""
+    name = re.sub(r"\((R|TM|tm|r)\)", "", name)
+    name = re.sub(r"\s*(CPU\s*)?@.*$", "", name)
+    name = re.sub(r"\b(\d+-Core|with Radeon.*|Processor|CPU)\b", "", name)
+    return re.sub(r"\s+", " ", name).strip()
 
 
 def detect_system() -> System:
@@ -208,18 +244,79 @@ def detect_system() -> System:
             family, name = "linux", "Linux"
     else:
         family, name = "other", platform.system()
-    return System(family, name, round(_ram_gb(), 1), detect_gpu())
+    return System(family, name, round(_ram_gb(), 1), detect_gpu(), _cpu_name(), _cores())
+
+
+# How strong an integrated graphics chip is, from its name (or the processor's, when the
+# chip's own name isn't known). Strong ones run the 4B model well; weak ones (older Intel
+# HD/UHD) are about as slow as the processor alone, so the 2B model is the better fit.
+_STRONG_IGPU = re.compile(r"radeon\s*(6[6-9]0m|7[4-9]0m|8[0-9]0[ms])|rembrandt|phoenix|hawk point|strix|krackan|"
+                          r"iris xe|\barc\b|core ultra|ryzen ai", re.I)
+_MEDIUM_IGPU = re.compile(r"vega|renoir|cezanne|lucienne|barcelo|iris plus|iris pro", re.I)
+_WEAK_IGPU = re.compile(r"\bu?hd graphics|\bgma\b|atom|celeron|pentium|radeon r[2-7]\b|raven|picasso", re.I)
+
+
+def _from_cpu(cpu: str) -> str:
+    """Guess the integrated graphics from the processor's model number."""
+    m = re.search(r"\bi[3579]-(\d{4,5})([a-z]\d?)?", cpu, re.I)
+    if m:  # Intel Core: 1135G7 is 11th generation with Iris Xe; 7300U is 7th with HD 620
+        num, suffix = m.group(1), (m.group(2) or "").upper()
+        gen = int(num[:2]) if len(num) == 5 or num.startswith("1") and len(num) == 4 and num[1] in "01234" else int(num[0])
+        if gen >= 11 and suffix in ("G4", "G7"):
+            return "strong"
+        return "weak" if gen <= 10 else "medium"
+    m = re.search(r"ryzen\s+[3579]\s+(?:pro\s+)?(\d)\d{3}", cpu, re.I)
+    if m:  # AMD Ryzen laptops: 6000+ have RDNA graphics (680M, 780M); older ones Vega
+        return "strong" if int(m.group(1)) >= 6 else "medium" if int(m.group(1)) >= 4 else "weak"
+    return "unknown"
+
+
+def igpu_tier(system: System) -> str:
+    """'strong', 'medium', 'weak' or 'unknown' for an integrated graphics chip, from its name or the processor's."""
+    name = system.gpu.name
+    for rx, tier in ((_STRONG_IGPU, "strong"), (_MEDIUM_IGPU, "medium"), (_WEAK_IGPU, "weak")):
+        if name and rx.search(name):
+            return tier
+    return _from_cpu(system.cpu)
+
+
+def recommendation(system: System) -> tuple[ModelChoice, str]:
+    """The model to recommend for this computer, and why (in plain words)."""
+    gpu, ram, cores = system.gpu, system.ram_gb, system.cores
+    lite, standard, better = MODELS_BY_KEY["lite"], MODELS_BY_KEY["standard"], MODELS_BY_KEY["better"]
+    ram_text = f"{ram:g} GB RAM"
+    if ram and ram < 8:
+        return lite, f"{ram_text}: the 2B model leaves room for everything else"
+    if gpu.vendor == "apple":
+        if ram >= 16:
+            return better, f"Apple chip with {ram_text}: the 9B model runs well"
+        return standard, f"Apple chip with {ram_text}"
+    if gpu.vram_gb and gpu.vram_gb >= 7.5 and not gpu.integrated:
+        return better, f"graphics card with {gpu.vram_gb:g} GB of its own memory: the 9B model fits on it"
+    if gpu.vendor != "none" and not gpu.integrated:
+        return standard, "graphics card with less than 8 GB of its own memory: the 4B model fits on it"
+    if gpu.vendor == "none":
+        if cores >= 8 and ram >= 16:
+            return standard, f"no graphics chip padou can use, but {cores} processor cores and {ram_text}"
+        return lite, "no graphics chip padou can use: on the processor alone the 2B model answers fastest"
+    tier = igpu_tier(system)
+    if tier == "strong":
+        if ram >= 12:
+            return standard, f"recent integrated graphics with {ram_text}: the 4B model runs well"
+        return lite, f"recent integrated graphics, but only {ram_text}"
+    if tier == "medium":
+        if ram >= 16:
+            return standard, f"integrated graphics with {ram_text}: the 4B model works, a little slowly"
+        return lite, f"older integrated graphics with {ram_text}"
+    if tier == "weak":
+        return lite, "older integrated graphics: the 4B model works too, but answers about twice as slowly"
+    if ram >= 16:
+        return standard, f"integrated graphics with {ram_text}"
+    return lite, f"integrated graphics with {ram_text}"
 
 
 def recommend(system: System) -> ModelChoice:
-    gpu, ram = system.gpu, system.ram_gb
-    if gpu.vram_gb and gpu.vram_gb >= 7.5 and not gpu.integrated:
-        return MODELS_BY_KEY["better"]
-    if gpu.vendor == "apple" and ram >= 16:
-        return MODELS_BY_KEY["better"]
-    if (gpu.vendor == "none" and ram < 12) or (ram and ram < 8):
-        return MODELS_BY_KEY["lite"]
-    return MODELS_BY_KEY["standard"]
+    return recommendation(system)[0]
 
 
 # --------------------------------------------------------------------------- #

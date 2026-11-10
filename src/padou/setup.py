@@ -30,11 +30,16 @@ def _show_system(theme: Theme, system: detect.System) -> None:
         kind = "integrated" if gpu.integrated else "dedicated"
         vram = f", {gpu.vram_gb:g} GB VRAM" if gpu.vram_gb and not gpu.integrated else ""
         gpu_text = f"{gpu.name} ({kind}{vram}) → {gpu.backend.upper()} build"
-    ui.table(theme, "Your system", ["", ""], [["OS", system.os_name], ["RAM", f"{system.ram_gb:g} GB"], ["GPU", gpu_text]], styles=["bold", theme.dim])
+    rows = [["OS", system.os_name]]
+    if system.cpu:
+        cores = f" ({system.cores} cores)" if system.cores else ""
+        rows.append(["CPU", detect.short_cpu(system.cpu) + cores])
+    rows += [["RAM", f"{system.ram_gb:g} GB"], ["GPU", gpu_text]]
+    ui.table(theme, "Your system", ["", ""], rows, styles=["bold", theme.dim])
 
 
 def _pick_model(theme: Theme, system: detect.System, auto: bool, installed: list[str] | None = None, ollama: bool = False) -> detect.ModelChoice:
-    rec = detect.recommend(system)
+    rec, why = detect.recommendation(system)
     rows = []
     for i, m in enumerate(detect.MODELS, 1):
         mark = Text("← recommended", style=f"bold {theme.accent}") if m is rec else Text("")
@@ -42,6 +47,7 @@ def _pick_model(theme: Theme, system: detect.System, auto: bool, installed: list
         have = " (installed)" if installed and any(x.split(":latest")[0] == m.ollama for x in installed) else ""
         rows.append([str(i), name + have, m.maker, f"{m.size_gb:g} GB", m.good_for, mark])
     ui.table(theme, "Pick a model", ["#", "Model", "Made by", "Download", "Good for", ""], rows, styles=[theme.accent, "bold", theme.dim, theme.dim, "", ""])
+    ui.info(theme, f"Recommended for this computer: {rec.label} ({why}).")
     if system.ram_gb and rec.min_ram_gb > system.ram_gb:
         ui.info(theme, f"Note: you have {system.ram_gb:g} GB RAM; even the recommended model may be tight.")
     if auto:
