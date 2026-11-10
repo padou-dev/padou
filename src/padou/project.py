@@ -178,6 +178,19 @@ MENTION = re.compile(r"(?<![\w/@.])@((?:~|\.{1,2})?/?[\w.\-/~]+)")
 MAX_ATTACH_CHARS = 12_000
 
 
+def _suggest(path: Path) -> str:
+    """'; did you mean @src/padou/__main__.py?' from the files next to where it should be."""
+    import difflib
+
+    folder = path.parent
+    try:
+        names = [p.name for p in folder.iterdir() if p.is_file()]
+    except OSError:
+        return ""
+    close = difflib.get_close_matches(path.name, names, n=2, cutoff=0.5)
+    return ("; did you mean " + " or ".join(close) + "?") if close else ""
+
+
 def attachments(text: str, cwd: Path, readable, limit: int = MAX_ATTACH_CHARS) -> tuple[str, list[str], list[str]]:
     """Find @path mentions; returns (extra text for the model, attached names, problems)."""
     from padou import tools
@@ -187,7 +200,9 @@ def attachments(text: str, cwd: Path, readable, limit: int = MAX_ATTACH_CHARS) -
     for m in dict.fromkeys(MENTION.findall(text)):
         path = tools.resolve(m, cwd)
         if not path.is_file():
-            continue  # not a file (an e-mail, a handle, a folder): leave it as text
+            if not path.exists() and ("/" in m or "." in m.lstrip(".")):  # meant as a file, but there's none
+                problems.append(f"@{m}: no such file{_suggest(path)} (not attached)")
+            continue  # an e-mail, a handle or a folder: leave it as text
         try:
             body = tools.read_file(str(path), cwd, max(1000, budget), roots=readable)
         except tools.ToolError as exc:

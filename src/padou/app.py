@@ -48,6 +48,20 @@ def _shell() -> str:
     return os.path.basename(os.environ.get("SHELL", "sh"))
 
 
+def accept_completion(buffer) -> None:
+    state = buffer.complete_state
+    completion = None
+    if state is not None:
+        completion = state.current_completion or (state.completions[0] if state.completions else None)
+    if completion is None:
+        buffer.validate_and_handle()
+        return
+    typed = buffer.document.text_before_cursor
+    buffer.apply_completion(completion)
+    if typed.startswith("/") and " " not in typed:  # a command name: run it, like picking from a menu
+        buffer.validate_and_handle()
+
+
 def _desktop() -> str:
     """', desktop Hyprland (Wayland)' on Linux, so answers fit the actual setup."""
     if not compat.LINUX:
@@ -583,6 +597,14 @@ class App:
         @kb.add("escape", "enter")
         def _newline(event):
             event.current_buffer.insert_text("\n")
+
+        from prompt_toolkit.filters import has_completions
+
+        @kb.add("enter", filter=has_completions)
+        def _accept_completion(event):
+            """Enter while suggestions are showing takes the (first or selected) suggestion instead of sending.
+            For a command name (/he → /help) it then runs it straight away."""
+            accept_completion(event.current_buffer)
 
         @kb.add("s-tab")
         def _cycle_mode(event):

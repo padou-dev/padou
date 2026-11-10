@@ -13,6 +13,8 @@ Faster on laptops, a new admin mode, optional web search, and more reliable answ
 - A quiet speed line under each answer: `3.1s · 140 tokens · 22 tok/s` (`reply_stats` under `[ui]`)
 - `padou bench`: score the current model on 17 fixed questions (two about code) in a practice folder, saved for comparison
 - Coding mode, when padou starts in a project: `@path` attaches a file (Tab completes it); the project's own test, lint and build commands can be run by the model in edit/admin mode after you approve (or allow them for the session); `/review` reviews uncommitted git changes; `d` in the confirmation box opens the change as a diff in VS Code / Code OSS / VSCodium; `/tutor` explains and hints instead of writing the code; `git_diff` and `git_diff_staged` commands
+- Enter on a suggestion (a file after `@`, a folder) takes the suggestion instead of sending the message; on a command name (`/he` → `/help`) it runs the command
+- A misspelled `@file` is reported (`no such file; did you mean …?`) instead of silently ignored, and a failed tool call keeps a readable title (`Read src/main.py`)
 - `/exit && stop` (or `/exit stop`) quits and stops the model server
 - `/help` in groups; `/undo list` (also `/changes`); `/tools`, `/system` and `/screenshot` still work but are no longer listed
 

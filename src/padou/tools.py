@@ -646,6 +646,18 @@ def _short(path_text: str) -> str:
         return str(path_text)
 
 
+def _title(name: str, args: dict) -> str:
+    """The same title a successful call gets ('Read ~/x.txt'), for a call that failed."""
+    path = str(args.get("path") or ".")
+    return {
+        "read_file": f"Read {_short(path)}",
+        "list_dir": f"List {_short(path)}",
+        "search": f"Search {args.get('pattern', '')!r} in {_short(path)}",
+        "run_command": f"Run {args.get('name', '?')}",
+        "man_page": f"Manual {args.get('name', '?')}",
+    }.get(name, name)
+
+
 def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_timeout: float, commands_enabled: bool = True, roots: list[Path] | None = None) -> ToolResult:
     if isinstance(raw_args, dict):
         args = raw_args
@@ -696,6 +708,6 @@ def execute(name: str, raw_args: str | dict, cwd: Path, limit: int, command_time
     except ToolError as exc:
         if "unknown tool" in str(exc):
             exc = ToolError(f"{exc}. The tools you have are listed in your tool definitions; use one of those names exactly")
-        return ToolResult(False, f"error: {exc}", f"{name}", str(exc))
+        return ToolResult(False, f"error: {exc}", _title(name, args), str(exc))
     except Exception as exc:  # never let a tool crash padou
         return ToolResult(False, f"error: {type(exc).__name__}: {exc}", f"{name}", f"{type(exc).__name__}")

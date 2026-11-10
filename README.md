@@ -186,7 +186,7 @@ padou --version
 
 ### Keys
 
-`Enter` send · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Esc` stop a reply (keeps what's written) · `Ctrl+C` cancel a reply · `Ctrl+D` quit
+`Enter` send (or, while suggestions show, take the suggestion) · `Alt+Enter` new line · `↑`/`↓` history · `Tab` complete commands · `Esc` stop a reply (keeps what's written) · `Ctrl+C` cancel a reply · `Ctrl+D` quit
 
 While padou works you see what it's doing (`working…`, `thinking…`, `choosing a tool…`) and for how long; as the reply streams, its length and speed.
 

@@ -203,3 +203,46 @@ def test_open_diff_writes_both_versions(monkeypatch, tmp_path):
     assert ui.open_diff("code", change)
     argv = started[0]
     assert argv[:2] == ["code", "--diff"] and Path(argv[2]).read_text() == "a = 1\n" and Path(argv[3]).read_text() == "a = 2\n"
+
+
+def test_misspelled_attachment_is_reported_with_a_suggestion(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "__main__.py").write_text("x")
+    extra, names, problems = project.attachments("add a docstring in @src/main.py", tmp_path, [tmp_path])
+    assert not names and "no such file" in problems[0] and "__main__.py" in problems[0]
+    assert project.attachments("ping @dana about it", tmp_path, [tmp_path])[2] == []  # a name, not a file
+
+
+def test_failed_tool_calls_keep_a_readable_title(tmp_path):
+    from padou import tools
+    r = tools.execute("read_file", {"path": "missing.py"}, tmp_path, 1000, 5, roots=[tmp_path])
+    assert not r.ok and r.title == "Read missing.py"
+
+
+class FakeState:
+    def __init__(self, completions, current=None):
+        self.completions, self.current_completion = completions, current
+
+
+class FakeBuffer:
+    def __init__(self, text, completions):
+        from prompt_toolkit.document import Document
+        self.document = Document(text)
+        self.complete_state = FakeState(completions)
+        self.applied, self.sent = [], False
+
+    def apply_completion(self, c):
+        self.applied.append(c)
+
+    def validate_and_handle(self):
+        self.sent = True
+
+
+def test_enter_takes_the_suggestion_instead_of_sending():
+    from padou import app as app_mod
+    b = FakeBuffer("look at @src/pa", ["padou/"])
+    app_mod.accept_completion(b)
+    assert b.applied == ["padou/"] and not b.sent
+    c = FakeBuffer("/he", ["/help"])
+    app_mod.accept_completion(c)
+    assert c.applied == ["/help"] and c.sent  # a command runs straight away
