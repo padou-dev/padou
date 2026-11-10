@@ -246,3 +246,45 @@ def test_enter_takes_the_suggestion_instead_of_sending():
     c = FakeBuffer("/he", ["/help"])
     app_mod.accept_completion(c)
     assert c.applied == ["/help"] and c.sent  # a command runs straight away
+
+
+# ------------------------------------------------------------ Phase 4: /retry, /copy code, /export
+
+
+def test_code_blocks_and_copy_code(monkeypatch):
+    reply = "Run this:\n```bash\nls -la\n```\nor this:\n```python\nprint(1)\nprint(2)\n```\n"
+    assert commands.code_blocks(reply) == ["ls -la", "print(1)\nprint(2)"]
+    copied = []
+    monkeypatch.setattr(commands, "_to_clipboard", lambda text: copied.append(text) or True)
+    from padou import theme
+    a = SimpleNamespace(theme=theme.load(theme_dir=None), last_reply=reply)
+    commands.cmd_copy(a, "code")
+    commands.cmd_copy(a, "code 1")
+    commands.cmd_copy(a, "")
+    assert copied == ["print(1)\nprint(2)", "ls -la", reply]
+
+
+def test_retry_asks_the_same_question_again(app_in_project):
+    a = app_in_project([Reply(content="first"), Reply(content="second")])
+    a.ask("what is @src/a.py?")
+    commands.cmd_retry(a, "")
+    users = [m for m in a.session.messages if m["role"] == "user"]
+    assert len(users) == 1 and "[Attached file @src/a.py]" in users[0]["content"]  # re-attached, not doubled
+    assert users[0]["content"].count("[Attached file") == 1 and a.last_reply == "second"
+
+
+def test_export_writes_markdown_and_never_overwrites(app_in_project):
+    a = app_in_project([Reply(content="Hello **there**")])
+    a.ask("hi")
+    commands.cmd_export(a, "chat")
+    out = (a.cwd / "chat.md").read_text()
+    assert "**You**\n\nhi" in out and "Hello **there**" in out
+    commands.cmd_export(a, "chat")  # exists: refused
+    assert (a.cwd / "chat.md").read_text() == out
+
+
+def test_working_label():
+    from padou import app as app_mod
+    call = ToolCall("1", "run_command", '{"name": "disk_usage"}')
+    assert app_mod._working_label(call) == "running disk_usage…"
+    assert app_mod._working_label(ToolCall("2", "read_file", '{"path": "a.txt"}')) == "reading a.txt…"

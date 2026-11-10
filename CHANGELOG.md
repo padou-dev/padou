@@ -15,6 +15,8 @@ Faster on laptops, a new admin mode, optional web search, and more reliable answ
 - Coding mode, when padou starts in a project: `@path` attaches a file (Tab completes it); the project's own test, lint and build commands can be run by the model in edit/admin mode after you approve (or allow them for the session); `/review` reviews uncommitted git changes; `d` in the confirmation box opens the change as a diff in VS Code / Code OSS / VSCodium; `/tutor` explains and hints instead of writing the code; `git_diff` and `git_diff_staged` commands
 - Enter on a suggestion (a file after `@`, a folder) takes the suggestion instead of sending the message; on a command name (`/he` → `/help`) it runs the command
 - A misspelled `@file` is reported (`no such file; did you mean …?`) instead of silently ignored, and a failed tool call keeps a readable title (`Read src/main.py`)
+- `/retry` asks the last question again; `/copy code [n]` copies just a code block; `/export [file]` saves the conversation as Markdown
+- While a tool runs, the spinner says what it's doing (`running disk_usage…`, `reading ~/x.conf…`, `searching the web…`)
 - `/exit && stop` (or `/exit stop`) quits and stops the model server
 - `/help` in groups; `/undo list` (also `/changes`); `/tools`, `/system` and `/screenshot` still work but are no longer listed
 

@@ -167,7 +167,9 @@ padou --version
 | `/clear` | Clear the screen and start a fresh conversation (the old one is saved, see `/resume`) |
 | `/models [n\|remove n]` | List models, switch to one (downloads it if needed), or remove a downloaded one |
 | `/status` | Model, server, context use and speed |
-| `/copy` | Copy the last reply to the clipboard |
+| `/retry` | Ask the last question again for a fresh answer (small models vary; attached files are read again) |
+| `/copy [code [n]]` | Copy the last reply to the clipboard; `/copy code` copies just its last code block (`/copy code 1` the first) |
+| `/export [file]` | Save the conversation as Markdown (default `padou-chat-<date>.md` in the current folder; never overwrites) |
 | `/mode [read\|edit\|admin]` | Read-only, edit (one folder) or admin (anywhere, system files through sudo); `Shift+Tab` switches read ↔ edit |
 | `/undo [list]` | Undo padou's last change (edits, new files, moves and deletions); `/undo list` shows every change this session |
 | `/server [stop\|restart\|log]` | The model server: status and memory, stop, restart, or its log |

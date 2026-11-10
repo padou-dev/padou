@@ -7,6 +7,8 @@ command name (e.g. "/resume 2" -> argument "2").
 
 from __future__ import annotations
 
+import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -31,7 +33,7 @@ class Command:
 
 
 HELP_GROUPS = [
-    ("Chat", ["clear", "compact", "resume", "copy", "think", "web"]),
+    ("Chat", ["clear", "retry", "compact", "resume", "copy", "export", "think", "web"]),
     ("Files and modes", ["mode", "folder", "undo"]),
     ("Coding", ["review", "tutor"]),
     ("Model", ["models", "server"]),
@@ -301,21 +303,96 @@ def cmd_status(app: "App", arg: str):
     ui.table(app.theme, "Status", ["", ""], rows, styles=["bold", app.theme.dim])
 
 
-def cmd_copy(app: "App", arg: str):
-    if not app.last_reply:
-        ui.info(app.theme, "Nothing to copy yet.")
-        return
+CODE_BLOCK = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+
+
+def code_blocks(text: str) -> list[str]:
+    return [b.rstrip("\n") for b in CODE_BLOCK.findall(text or "")]
+
+
+def _to_clipboard(text: str) -> bool:
     for argv in compat.clipboard_commands():
         if shutil.which(argv[0]):
             if compat.program_name(argv[0]) == "clip":
                 # Windows' clip.exe reads UTF-16 when the text starts with a byte-order mark
-                data = ("\ufeff" + app.last_reply).encode("utf-16-le")
+                data = ("\ufeff" + text).encode("utf-16-le")
             else:
-                data = app.last_reply.encode("utf-8")
+                data = text.encode("utf-8")
             subprocess.run(argv, input=data, check=False)
-            ui.success(app.theme, f"Copied the last reply ({len(app.last_reply)} characters).")
+            return True
+    return False
+
+
+def cmd_copy(app: "App", arg: str):
+    """/copy: the last reply. /copy code: its last code block (/copy code 2: the second one)."""
+    th = app.theme
+    if not app.last_reply:
+        ui.info(th, "Nothing to copy yet.")
+        return
+    words = arg.split()
+    text, what = app.last_reply, "the last reply"
+    if words and words[0].lower() == "code":
+        blocks = code_blocks(app.last_reply)
+        if not blocks:
+            ui.info(th, "The last reply has no code block. /copy copies the whole reply.")
             return
-    ui.error(app.theme, "No clipboard tool found. Linux (Wayland): install wl-clipboard; X11: xclip")
+        n = int(words[1]) if len(words) > 1 and words[1].isdigit() else len(blocks)
+        if not 1 <= n <= len(blocks):
+            ui.error(th, f"The last reply has {len(blocks)} code block{'s' * (len(blocks) != 1)}.")
+            return
+        text = blocks[n - 1]
+        what = f"code block {n} of {len(blocks)}" if len(blocks) > 1 else "the code block"
+    if _to_clipboard(text):
+        lines = text.count("\n") + 1
+        ui.success(th, f"Copied {what} ({lines} line{'s' * (lines != 1)}).")
+    else:
+        ui.error(th, "No clipboard tool found. Linux (Wayland): install wl-clipboard; X11: xclip")
+
+
+def cmd_retry(app: "App", arg: str):
+    """Ask the last question again (a fresh answer; small models vary)."""
+    msgs = app.session.messages
+    last_user = next((i for i in range(len(msgs) - 1, 0, -1) if msgs[i].get("role") == "user"), None)
+    if last_user is None:
+        ui.info(app.theme, "Nothing to retry yet.")
+        return
+    question = msgs[last_user]["content"]
+    shown = question.split("\n\n[Attached file", 1)[0]  # attachments are added again from the @mentions
+    del msgs[last_user:]
+    app.last_reply = ""
+    ui.info(app.theme, f"Asking again: {shown[:100]}{'…' if len(shown) > 100 else ''}")
+    app.ask(shown)
+
+
+def cmd_export(app: "App", arg: str):
+    """Save this conversation as a Markdown file."""
+    from datetime import datetime
+    from pathlib import Path
+
+    th = app.theme
+    convo = [m for m in app.session.messages[1:] if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()]
+    if not convo:
+        ui.info(th, "Nothing to export yet.")
+        return
+    target = Path(os.path.expanduser(arg.strip())) if arg.strip() else Path(f"padou-chat-{datetime.now():%Y%m%d-%H%M}.md")
+    if not target.is_absolute():
+        target = app.cwd / target
+    if target.suffix.lower() != ".md":
+        target = target.with_suffix(".md")
+    if target.exists():
+        ui.error(th, f"{ui.short_path(target)} already exists; padou won't overwrite it. Give another name: /export <file>")
+        return
+    lines = [f"# padou conversation", "", f"{datetime.now():%Y-%m-%d %H:%M} · {app.model_label}", ""]
+    for m in convo:
+        who = "**You**" if m["role"] == "user" else "**padou**"
+        lines += [who, "", str(m["content"]).strip(), ""]
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\n".join(lines), encoding="utf-8")
+    except OSError as exc:
+        ui.error(th, f"Couldn't save it: {exc.strerror or exc}")
+        return
+    ui.success(th, f"Saved the conversation to {ui.short_path(target)} ({len(convo)} messages).")
 
 
 def cmd_tools(app: "App", arg: str):
@@ -864,7 +941,9 @@ COMMANDS: dict[str, Command] = {
     "clear": Command(cmd_clear, "Clear the screen and start a fresh conversation"),
     "models": Command(cmd_models, "List models, switch to one (downloads it if needed), or remove one", "[n|remove n]"),
     "status": Command(cmd_status, "Model, server, context use and speed"),
-    "copy": Command(cmd_copy, "Copy the last reply to the clipboard"),
+    "copy": Command(cmd_copy, "Copy the last reply to the clipboard; /copy code: just its code", "[code [n]]"),
+    "retry": Command(cmd_retry, "Ask the last question again for a fresh answer"),
+    "export": Command(cmd_export, "Save this conversation as a Markdown file", "[file]"),
     "tools": Command(cmd_tools, "List the tools padou may use"),
     "folder": Command(cmd_folder, "Folders padou may read: list, add, remove", "[add <path>]"),
     "mode": Command(cmd_mode, "Read-only, edit (one folder) or admin (anywhere); Shift+Tab: read ↔ edit", "[read|edit|admin]"),

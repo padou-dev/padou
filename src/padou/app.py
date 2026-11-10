@@ -48,6 +48,21 @@ def _shell() -> str:
     return os.path.basename(os.environ.get("SHELL", "sh"))
 
 
+def _working_label(call) -> str:
+    """What padou is doing while a tool runs: 'running journalctl…', 'reading ~/x.conf…'."""
+    import json
+
+    try:
+        args = json.loads(call.arguments or "{}")
+    except ValueError:
+        args = {}
+    if not isinstance(args, dict):
+        args = {}
+    title = tools._title(call.name, args)
+    verb, _, rest = title.partition(" ")
+    return {"Read": "reading", "List": "listing", "Search": "searching", "Run": "running", "Manual": "reading the manual for"}.get(verb, verb.lower()) + f" {rest}…"
+
+
 def accept_completion(buffer) -> None:
     state = buffer.complete_state
     completion = None
@@ -350,7 +365,8 @@ class App:
                                          "user what went wrong, or try a different approach."})
                         continue
                     if call.name in web.TOOL_NAMES:
-                        result = web.execute(call.name, call.arguments, self.cfg.web, self.cfg.tools.max_output_chars)
+                        with ui.ReplyView(self.theme, ("searching the web…" if call.name == "web_search" else "reading the page…")):
+                            result = web.execute(call.name, call.arguments, self.cfg.web, self.cfg.tools.max_output_chars)
                         ui.tool_call(self.theme, result.title, result.summary, result.ok, result.output, self.cfg.ui.show_tool_output)
                         messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})
                         if not result.ok:
@@ -366,15 +382,9 @@ class App:
                         result = self._handle_write(call)
                         messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})
                         continue
-                    result = tools.execute(
-                        call.name,
-                        call.arguments,
-                        self.cwd,
-                        self.cfg.tools.max_output_chars,
-                        self.cfg.tools.command_timeout,
-                        self.cfg.tools.commands,
-                        self.folders,
-                    )
+                    with ui.ReplyView(self.theme, _working_label(call)):
+                        result = tools.execute(call.name, call.arguments, self.cwd, self.cfg.tools.max_output_chars,
+                                               self.cfg.tools.command_timeout, self.cfg.tools.commands, self.folders)
                     ui.tool_call(self.theme, result.title, result.summary, result.ok, result.output, self.cfg.ui.show_tool_output)
                     messages.append({"role": "tool", "tool_call_id": call.id, "content": result.output})
                     if not result.ok:
